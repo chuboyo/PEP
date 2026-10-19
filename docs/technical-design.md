@@ -57,14 +57,14 @@ flowchart LR
   api --> wa
 ```
 
-Local development uses Compose for Postgres, the API, and the web app. Staging, built in Slice 13, uses the same API image on ECS Fargate, RDS Postgres, and Amplify Hosting for the static web build.
+Local development uses Compose for Postgres, the API, and the web app. Staging, built in Slice 12, uses the same API image on ECS Fargate, RDS Postgres, and Amplify Hosting for the static web build.
 
 ### Repository layout
 
 ```text
 apps/api/                 FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
 apps/web/                 Vite, React, TypeScript, React Router, TanStack Query
-infra/                    Terraform, added in Slice 13
+infra/                    Terraform, added in Slice 12
 compose.yaml
 docs/technical-design.md
 ```
@@ -84,7 +84,7 @@ apps/api/alembic/
 apps/api/tests/
 ```
 
-Domain modules do not import Mangum, boto3, or the WhatsApp HTTP client. WhatsApp is behind a small port introduced in Slice 10. A dev adapter records outbound messages in memory so tests do not call Meta.
+Domain modules do not import Mangum, boto3, or the WhatsApp HTTP client. WhatsApp is behind a small port introduced in Slice 9. A dev adapter records outbound messages in memory so tests do not call Meta.
 
 ### Stack
 
@@ -162,7 +162,7 @@ Create tables in the slice that first needs them. Column lists below are the fin
 
 ### users
 
-Slice 2.
+Slice 1.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -178,7 +178,7 @@ Slice 2.
 
 ### organizations
 
-Slice 2. This table stores clubs.
+Slice 1. This table stores clubs.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ Slice 2. This table stores clubs.
 
 ### memberships
 
-Slice 2.
+Slice 1.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -210,7 +210,7 @@ Constraints: unique `(user_id, organization_id)`. Unique `(user_id)` where `stat
 
 ### refresh_tokens
 
-Slice 2.
+Slice 1.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -223,7 +223,7 @@ Slice 2.
 
 ### invitations
 
-Slice 3.
+Slice 2.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -231,7 +231,7 @@ Slice 3.
 | `user_id` | uuid fk users not null | |
 | `organization_id` | uuid fk organizations not null | |
 | `role` | text not null | Same values as membership role |
-| `team_id` | uuid null | Set when a coach registers a player onto a team. Slice 4 adds the foreign key |
+| `team_id` | uuid null | Set when a coach registers a player onto a team. Slice 3 adds the foreign key |
 | `token_hash` | text unique not null | |
 | `expires_at` | timestamptz not null | 7 days |
 | `accepted_at` | timestamptz null | |
@@ -242,7 +242,7 @@ The raw token appears once, in the invitation link: `{APP_PUBLIC_URL}/accept-inv
 
 ### teams and team_members
 
-Slice 4.
+Slice 3.
 
 `teams`: `id`, `organization_id`, `name`, `created_by`, `created_at`. Unique `(organization_id, name)`.
 
@@ -250,7 +250,7 @@ Slice 4.
 
 ### questionnaire_templates and questionnaires
 
-Slice 5.
+Slice 4.
 
 `questionnaire_templates`: `id`, `key` unique, `name`, `description`, `questions` jsonb, `schema_version` int. Seeded, not club-owned.
 
@@ -310,7 +310,7 @@ Editing a questionnaire with `locked_at` set creates a new row with `version + 1
 
 ### assignments, targets, occurrences, responses
 
-Slice 6, except the WhatsApp columns are used in Slice 10.
+Slice 5, except the WhatsApp columns are used in Slice 9.
 
 `assignments`:
 
@@ -323,9 +323,9 @@ Slice 6, except the WhatsApp columns are used in Slice 10.
 | `created_by` | uuid fk users not null | |
 | `target_type` | text not null | `team` or `players` |
 | `team_id` | uuid fk null | Required when target is `team` |
-| `schedule` | text not null | `once`, `daily`, `weekly`. Only `once` is implemented before Slice 11 |
+| `schedule` | text not null | `once`, `daily`, `weekly`. Only `once` is implemented before Slice 10 |
 | `due_at` | timestamptz null | Required for `once` |
-| `starts_on` | date null | Used by Slice 11 recurrence |
+| `starts_on` | date null | Used by Slice 10 recurrence |
 | `ends_on` | date null | |
 | `channel` | text not null | `in_app` or `whatsapp` |
 | `created_at` | timestamptz not null | |
@@ -368,7 +368,7 @@ Answer object is a map of question id to value. Rating is an integer. `yes_no` i
 
 ### deliveries
 
-Slice 10. Slice 11 writes reminder rows into the same table.
+Slice 9. Slice 10 writes reminder rows into the same table.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -382,7 +382,7 @@ Slice 10. Slice 11 writes reminder rows into the same table.
 
 ### training_routines and routine_assignments
 
-Slice 9.
+Slice 8.
 
 `training_routines`: `id`, `organization_id`, `team_id` null, `created_by`, `name`, `description`, `objective`, `exercises` jsonb, `duration_minutes` int, `intensity` text null, `frequency` text null, `start_date`, `end_date` null, `instructions` text null, `created_at`.
 
@@ -419,7 +419,7 @@ Deactivating a membership leaves historical responses in place and rejects new l
 
 ## WhatsApp behavior
 
-Used by Slice 10 and Slice 11. Meta allows a business to send a free-form or interactive message only inside the 24-hour window that opens when the player messages the business or taps a template button. Outside that window the API sends an approved template.
+Used by Slice 9 and Slice 10. Meta allows a business to send a free-form or interactive message only inside the 24-hour window that opens when the player messages the business or taps a template button. Outside that window the API sends an approved template.
 
 Two utility templates, approved in Meta before staging:
 
@@ -468,7 +468,7 @@ Webhook:
 
 Assignment to WhatsApp fails with `422` when any question has type `short_text`, or when a target player has no `phone_e164`.
 
-Configuration added in Slice 10: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_TEMPLATE_START`, `WHATSAPP_TEMPLATE_REMINDER`.
+Configuration added in Slice 9: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_TEMPLATE_START`, `WHATSAPP_TEMPLATE_REMINDER`.
 
 ## Web application
 

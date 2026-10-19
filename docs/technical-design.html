@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Pep MVP technical design</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #f6f4ef; color: #1c1915; font: 17px/1.55 Iowan Old Style, Palatino, Georgia, serif; }
+  #TOC, main, header { max-width: 46rem; margin: 0 auto; padding: 0 1.25rem; }
+  header { padding-top: 2.5rem; }
+  h1, h2, h3 { font-family: Georgia, serif; line-height: 1.2; }
+  h1 { font-size: 2.1rem; margin-bottom: 0.3rem; }
+  h2 { margin-top: 2.4rem; padding-top: 0.8rem; border-top: 1px solid #ddd6c8; font-size: 1.45rem; }
+  h3 { margin-top: 1.6rem; font-size: 1.15rem; }
+  #TOC { background: white; border: 1px solid #e4dccb; border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1.5rem; }
+  #TOC > ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+  #TOC a { color: #3d4f3a; text-decoration: none; }
+  #TOC a:hover { text-decoration: underline; }
+  a { color: #2457a6; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; background: #efeae0; padding: 0.1em 0.3em; border-radius: 4px; }
+  pre { background: #1f2420; color: #f4f1ea; padding: 0.9rem 1rem; border-radius: 8px; overflow-x: auto; }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  pre.mermaid { background: white; color: inherit; border: 1px solid #e4dccb; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; background: white; font-size: 0.92rem; }
+  th, td { border: 1px solid #e4dccb; padding: 0.4rem 0.55rem; vertical-align: top; text-align: left; }
+  th { background: #efe8da; }
+  main { padding-bottom: 4rem; }
+</style>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Pep MVP technical design</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#pep-mvp-technical-design"
+id="toc-pep-mvp-technical-design">Pep MVP technical design</a>
+<ul>
+<li><a href="#how-to-implement-a-slice"
+id="toc-how-to-implement-a-slice">How to implement a slice</a></li>
+<li><a href="#product-loop" id="toc-product-loop">Product loop</a></li>
+<li><a href="#locked-decisions" id="toc-locked-decisions">Locked
+decisions</a></li>
+<li><a href="#shared-architecture" id="toc-shared-architecture">Shared
+architecture</a></li>
+<li><a href="#data-model" id="toc-data-model">Data model</a></li>
+<li><a href="#authorization"
+id="toc-authorization">Authorization</a></li>
+<li><a href="#whatsapp-behavior" id="toc-whatsapp-behavior">WhatsApp
+behavior</a></li>
+<li><a href="#web-application" id="toc-web-application">Web
+application</a></li>
+<li><a href="#slice-0--walking-skeleton"
+id="toc-slice-0--walking-skeleton">Slice 0 — Walking skeleton</a></li>
+<li><a href="#slice-1--identity" id="toc-slice-1--identity">Slice 1 —
+Identity</a></li>
+<li><a href="#slice-2--club-entry" id="toc-slice-2--club-entry">Slice 2
+— Club entry</a></li>
+<li><a href="#slice-3--teams-and-players"
+id="toc-slice-3--teams-and-players">Slice 3 — Teams and players</a></li>
+<li><a href="#slice-4--questionnaires"
+id="toc-slice-4--questionnaires">Slice 4 — Questionnaires</a></li>
+<li><a href="#slice-5--assign-and-answer-in-the-app"
+id="toc-slice-5--assign-and-answer-in-the-app">Slice 5 — Assign and
+answer in the app</a></li>
+<li><a href="#slice-6--coach-dashboard"
+id="toc-slice-6--coach-dashboard">Slice 6 — Coach dashboard</a></li>
+<li><a href="#slice-7--player-history"
+id="toc-slice-7--player-history">Slice 7 — Player history</a></li>
+<li><a href="#slice-8--training-routines"
+id="toc-slice-8--training-routines">Slice 8 — Training routines</a></li>
+<li><a href="#slice-9--whatsapp" id="toc-slice-9--whatsapp">Slice 9 —
+WhatsApp</a></li>
+<li><a href="#slice-10--reminders" id="toc-slice-10--reminders">Slice 10
+— Reminders</a></li>
+<li><a href="#slice-11--admin-views"
+id="toc-slice-11--admin-views">Slice 11 — Admin views</a></li>
+<li><a href="#slice-12--staging" id="toc-slice-12--staging">Slice 12 —
+Staging</a></li>
+<li><a href="#slice-order" id="toc-slice-order">Slice order</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="pep-mvp-technical-design">Pep MVP technical design</h1>
+<p>Status: ready for review. Implementation has not started.</p>
+<p>This document is the source of truth for the MVP. An implementation
+agent takes one slice, reads that slice plus the shared sections below,
+and stops. Later slices are out of scope for that session.</p>
+<p>Product source: the Pep PRD (MVP). Where this document and the PRD
+disagree, this document wins. Those disagreements are listed under <a
+href="#locked-decisions">Locked decisions</a>.</p>
+<h2 id="how-to-implement-a-slice">How to implement a slice</h2>
+<ol type="1">
+<li>Read <a href="#shared-architecture">Shared architecture</a> through
+<a href="#authorization">Authorization</a>, then the slice you were
+assigned.</li>
+<li>Implement only that slice. Leave later tables, routes, and screens
+unbuilt.</li>
+<li>Put business rules in services. Routers validate input, call a
+service, and return a schema. Repositories are the only place that
+queries the database.</li>
+<li>Add an Alembic migration for every schema change. Do not edit a
+migration that has already been applied in a shared environment.</li>
+<li>Prove the slice with the tests listed in it. Run the API tests
+against Postgres, not SQLite.</li>
+<li>When the slice has a screen, exercise that screen in the browser:
+the happy path and the failure the tests cover.</li>
+<li>Do not add a public signup route, a demo mode, response edits, or a
+second role system on teams.</li>
+</ol>
+<p>Suggested agent prompt:</p>
+<pre class="text"><code>Implement Slice N from docs/technical-design.md in /Users/Chubiyojo/Documents/PEP.
+Follow the shared architecture and only the work described in that slice.
+Do not implement later slices. Finish by running the slice tests.</code></pre>
+<h2 id="product-loop">Product loop</h2>
+<p>A Superadmin creates a club and registers a club admin. The club
+admin registers a coach. The coach creates a team, registers players,
+and sends a questionnaire. The player answers in the WhatsApp thread or
+in the app. The response is stored once. The coach sees completion,
+averages, and attention flags, reminds players who have not answered,
+and assigns a training routine the player can mark complete.</p>
+<h2 id="locked-decisions">Locked decisions</h2>
+<ul>
+<li>Tenancy is one shared Postgres database and one shared schema. Every
+club-owned row carries <code>organization_id</code>. Staging and
+production are separate deployments with separate databases. There is no
+demo/real column.</li>
+<li>An organization is a club. There is no organization type and no
+coach workspace.</li>
+<li>Identity is <code>users</code>, <code>organizations</code>, and
+<code>memberships</code>. <code>users.platform_role</code> is set only
+for a Superadmin. Club roles live only on <code>memberships</code>:
+<code>CLUB_ADMIN</code>, <code>COACH</code>, or <code>PLAYER</code>. A
+person belongs to one club.</li>
+<li>Teams are rosters. <code>team_members</code> has no role
+column.</li>
+<li>There is no public signup. A Superadmin registers a club admin. A
+club admin registers a coach. A coach registers a player. Each person
+sets their own password from an invitation link, then receives a
+JWT.</li>
+<li>A club has many questionnaires. Questions are a JSONB list on the
+questionnaire row.</li>
+<li>A submitted response is immutable. The API has no update or delete
+route. A database trigger rejects <code>UPDATE</code> and
+<code>DELETE</code>.</li>
+<li>WhatsApp collects the survey in the thread with buttons and lists.
+Typed WhatsApp messages are not answers. <code>short_text</code> is
+allowed in the app and cannot be assigned to WhatsApp.</li>
+<li>Dashboard authentication is a JWT access token and a rotating
+refresh token. No session cookies. Amplify is static hosting only: no
+Amplify Auth, Data, or Cognito.</li>
+<li>The API runs as a long-lived container. Lambda is not the MVP
+host.</li>
+</ul>
+<p>Out of scope for the whole MVP: demo mode, coach or player
+self-signup, club self-signup, KYC, multiple club admins, Telegram,
+WhatsApp Flows, wearables, GPS, medical records, payments, social
+features, and AI coaching.</p>
+<h2 id="shared-architecture">Shared architecture</h2>
+<pre class="mermaid">flowchart LR
+  web[React on Amplify]
+  api[FastAPI on Fargate]
+  db[(Postgres)]
+  wa[WhatsApp Cloud API]
+  web -->|JWT| api
+  wa -->|signed webhook| api
+  api --> db
+  api --> wa</pre>
+<p>Local development uses Compose for Postgres, the API, and the web
+app. Staging, built in Slice 12, uses the same API image on ECS Fargate,
+RDS Postgres, and Amplify Hosting for the static web build.</p>
+<h3 id="repository-layout">Repository layout</h3>
+<pre class="text"><code>apps/api/                 FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
+apps/web/                 Vite, React, TypeScript, React Router, TanStack Query
+infra/                    Terraform, added in Slice 12
+compose.yaml
+docs/technical-design.md</code></pre>
+<p>API layout:</p>
+<pre class="text"><code>apps/api/app/main.py
+apps/api/app/core/        config, security, dependencies
+apps/api/app/db/          session, base
+apps/api/app/models/
+apps/api/app/schemas/
+apps/api/app/services/
+apps/api/app/repositories/
+apps/api/app/api/v1/
+apps/api/alembic/
+apps/api/tests/</code></pre>
+<p>Domain modules do not import Mangum, boto3, or the WhatsApp HTTP
+client. WhatsApp is behind a small port introduced in Slice 9. A dev
+adapter records outbound messages in memory so tests do not call
+Meta.</p>
+<h3 id="stack">Stack</h3>
+<ul>
+<li>Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Pydantic v2, psycopg
+3</li>
+<li>Password hashing: Argon2</li>
+<li>Postgres 16</li>
+<li>Node 22, React, Vite, TypeScript</li>
+<li>API tests: pytest and HTTPX</li>
+<li>Lint: Ruff</li>
+</ul>
+<h3 id="api-conventions">API conventions</h3>
+<ul>
+<li>Prefix: <code>/api/v1</code>.</li>
+<li>JSON requests and responses. IDs are UUID strings.</li>
+<li>Timestamps are timezone-aware UTC.</li>
+<li>Authenticated calls send
+<code>Authorization: Bearer &lt;access-token&gt;</code>.</li>
+<li><code>401</code> means missing or invalid credentials.
+<code>403</code> means the caller is authenticated and the role cannot
+perform the action. <code>404</code> means the row does not exist or is
+outside the caller's club, team, or self. Do not use <code>403</code>
+for a cross-club id.</li>
+<li>A second submit of a finished occurrence returns
+<code>409</code>.</li>
+<li>List endpoints are unpaginated. Pilot clubs are small. Do not add
+pagination in the MVP slices.</li>
+<li>FastAPI's generated OpenAPI schema is written to
+<code>apps/api/openapi.json</code>. The web app generates TypeScript
+types from that file. Commit both the schema and the generated types
+when a slice changes the API.</li>
+</ul>
+<h3 id="configuration">Configuration</h3>
+<p>Slice 0 introduces:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>DATABASE_URL</code></td>
+<td>Postgres connection string</td>
+</tr>
+<tr class="even">
+<td><code>JWT_SECRET</code></td>
+<td>HMAC secret for access tokens</td>
+</tr>
+<tr class="odd">
+<td><code>ACCESS_TOKEN_MINUTES</code></td>
+<td>Default 15</td>
+</tr>
+<tr class="even">
+<td><code>REFRESH_TOKEN_DAYS</code></td>
+<td>Default 14</td>
+</tr>
+<tr class="odd">
+<td><code>CORS_ORIGINS</code></td>
+<td>Comma-separated web origins</td>
+</tr>
+<tr class="even">
+<td><code>APP_PUBLIC_URL</code></td>
+<td>Base URL used in invitation links</td>
+</tr>
+</tbody>
+</table>
+<p>Later slices add variables only in the slice that needs them.</p>
+<h2 id="data-model">Data model</h2>
+<p>Club-owned tables include <code>organization_id</code> and are always
+filtered with the principal. Platform tables are <code>users</code>
+(login) and <code>questionnaire_templates</code>.</p>
+<pre class="mermaid">flowchart TD
+  users[users]
+  organizations[organizations]
+  memberships[memberships]
+  invitations[invitations]
+  teams[teams]
+  teamMembers[team_members]
+  templates[questionnaire_templates]
+  questionnaires[questionnaires]
+  assignments[assignments]
+  occurrences[player_occurrences]
+  responses[responses]
+  deliveries[deliveries]
+  routines[training_routines]
+  routineAssignments[routine_assignments]
+  users --> memberships
+  organizations --> memberships
+  users --> invitations
+  organizations --> invitations
+  organizations --> teams
+  teams --> teamMembers
+  users --> teamMembers
+  templates --> questionnaires
+  organizations --> questionnaires
+  questionnaires --> assignments
+  assignments --> occurrences
+  occurrences --> responses
+  occurrences --> deliveries
+  organizations --> routines
+  routines --> routineAssignments</pre>
+<p>Create tables in the slice that first needs them. Column lists below
+are the final shape.</p>
+<h3 id="users">users</h3>
+<p>Slice 1.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td><code>gen_random_uuid()</code></td>
+</tr>
+<tr class="even">
+<td><code>email</code></td>
+<td>citext unique not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>password_hash</code></td>
+<td>text null</td>
+<td>Null while the invitation is open</td>
+</tr>
+<tr class="even">
+<td><code>name</code></td>
+<td>text not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>phone_e164</code></td>
+<td>text null unique</td>
+<td>Required before a WhatsApp assignment</td>
+</tr>
+<tr class="even">
+<td><code>status</code></td>
+<td>text not null</td>
+<td><code>invited</code>, <code>active</code>,
+<code>deactivated</code></td>
+</tr>
+<tr class="odd">
+<td><code>platform_role</code></td>
+<td>text null</td>
+<td>Only <code>SUPERADMIN</code>, otherwise null</td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>updated_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="organizations">organizations</h3>
+<p>Slice 1. This table stores clubs.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>name</code></td>
+<td>text not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>sport</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>country</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>location</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>logo_url</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>contact_email</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>status</code></td>
+<td>text not null</td>
+<td><code>active</code>, <code>inactive</code></td>
+</tr>
+<tr class="odd">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>updated_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="memberships">memberships</h3>
+<p>Slice 1.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>user_id</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>organization_id</code></td>
+<td>uuid fk organizations not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>role</code></td>
+<td>text not null</td>
+<td><code>CLUB_ADMIN</code>, <code>COACH</code>,
+<code>PLAYER</code></td>
+</tr>
+<tr class="odd">
+<td><code>status</code></td>
+<td>text not null</td>
+<td><code>invited</code>, <code>active</code>,
+<code>deactivated</code></td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Constraints: unique <code>(user_id, organization_id)</code>. Unique
+<code>(user_id)</code> where <code>status &lt;&gt; 'deactivated'</code>,
+so a person belongs to one club. Unique <code>(organization_id)</code>
+where <code>role = 'CLUB_ADMIN'</code> and
+<code>status &lt;&gt; 'deactivated'</code>.</p>
+<h3 id="refresh_tokens">refresh_tokens</h3>
+<p>Slice 1.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>user_id</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>token_hash</code></td>
+<td>text unique not null</td>
+<td>Store a hash, never the raw token</td>
+</tr>
+<tr class="even">
+<td><code>expires_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>revoked_at</code></td>
+<td>timestamptz null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="invitations">invitations</h3>
+<p>Slice 2.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>user_id</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>organization_id</code></td>
+<td>uuid fk organizations not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>role</code></td>
+<td>text not null</td>
+<td>Same values as membership role</td>
+</tr>
+<tr class="odd">
+<td><code>team_id</code></td>
+<td>uuid null</td>
+<td>Set when a coach registers a player onto a team. Slice 3 adds the
+foreign key</td>
+</tr>
+<tr class="even">
+<td><code>token_hash</code></td>
+<td>text unique not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>expires_at</code></td>
+<td>timestamptz not null</td>
+<td>7 days</td>
+</tr>
+<tr class="even">
+<td><code>accepted_at</code></td>
+<td>timestamptz null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>created_by</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The raw token appears once, in the invitation link:
+<code>{APP_PUBLIC_URL}/accept-invite?token=...</code>. Delivery is a
+port. The dev adapter logs the link. Do not integrate an email provider
+in the MVP slices.</p>
+<h3 id="teams-and-team_members">teams and team_members</h3>
+<p>Slice 3.</p>
+<p><code>teams</code>: <code>id</code>, <code>organization_id</code>,
+<code>name</code>, <code>created_by</code>, <code>created_at</code>.
+Unique <code>(organization_id, name)</code>.</p>
+<p><code>team_members</code>: <code>team_id</code>,
+<code>user_id</code>, <code>created_at</code>. Primary key
+<code>(team_id, user_id)</code>. No role column. The user's role is
+their membership in the club.</p>
+<h3
+id="questionnaire_templates-and-questionnaires">questionnaire_templates
+and questionnaires</h3>
+<p>Slice 4.</p>
+<p><code>questionnaire_templates</code>: <code>id</code>,
+<code>key</code> unique, <code>name</code>, <code>description</code>,
+<code>questions</code> jsonb, <code>schema_version</code> int. Seeded,
+not club-owned.</p>
+<p><code>questionnaires</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>organization_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>template_id</code></td>
+<td>uuid fk null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>version</code></td>
+<td>int not null</td>
+<td>Starts at 1</td>
+</tr>
+<tr class="odd">
+<td><code>supersedes_id</code></td>
+<td>uuid fk questionnaires null</td>
+<td>Previous version</td>
+</tr>
+<tr class="even">
+<td><code>name</code></td>
+<td>text not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>description</code></td>
+<td>text null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>questions</code></td>
+<td>jsonb not null</td>
+<td>Validated by Pydantic</td>
+</tr>
+<tr class="odd">
+<td><code>schema_version</code></td>
+<td>int not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>created_by</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>locked_at</code></td>
+<td>timestamptz null</td>
+<td>Set when the first assignment is created</td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Question document:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;schema_version&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;questions&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="st">&quot;sleep&quot;</span><span class="fu">,</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;prompt&quot;</span><span class="fu">:</span> <span class="st">&quot;How did you sleep?&quot;</span><span class="fu">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;rating&quot;</span><span class="fu">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;min&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;max&quot;</span><span class="fu">:</span> <span class="dv">5</span><span class="fu">,</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;required&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="st">&quot;ready&quot;</span><span class="fu">,</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;prompt&quot;</span><span class="fu">:</span> <span class="st">&quot;Ready to train?&quot;</span><span class="fu">,</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;yes_no&quot;</span><span class="fu">,</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;required&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Allowed <code>type</code> values:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Shape</th>
+<th>WhatsApp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>yes_no</code></td>
+<td>no extra fields</td>
+<td>Reply buttons, titles <code>Yes</code> and <code>No</code></td>
+</tr>
+<tr class="even">
+<td><code>rating</code></td>
+<td><code>min</code> 1 and <code>max</code> 5 only</td>
+<td>List rows titled <code>1</code> through <code>5</code></td>
+</tr>
+<tr class="odd">
+<td><code>single_choice</code></td>
+<td><code>options</code> array of <code>{id, label}</code>, 1 to 10
+items, label at most 24 characters</td>
+<td>List rows</td>
+</tr>
+<tr class="even">
+<td><code>short_text</code></td>
+<td><code>max_length</code> default 280</td>
+<td>Not allowed on a WhatsApp assignment</td>
+</tr>
+</tbody>
+</table>
+<p>Question <code>id</code> values are unique inside one questionnaire
+and match <code>^[a-z][a-z0-9_]{0,40}$</code>.</p>
+<p>Editing a questionnaire with <code>locked_at</code> set creates a new
+row with <code>version + 1</code> and <code>supersedes_id</code>
+pointing at the locked row. Assignments keep the old snapshot.</p>
+<h3 id="assignments-targets-occurrences-responses">assignments, targets,
+occurrences, responses</h3>
+<p>Slice 5, except the WhatsApp columns are used in Slice 9.</p>
+<p><code>assignments</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>organization_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>questionnaire_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>questions_snapshot</code></td>
+<td>jsonb not null</td>
+<td>Copy of questions at assignment time</td>
+</tr>
+<tr class="odd">
+<td><code>created_by</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>target_type</code></td>
+<td>text not null</td>
+<td><code>team</code> or <code>players</code></td>
+</tr>
+<tr class="odd">
+<td><code>team_id</code></td>
+<td>uuid fk null</td>
+<td>Required when target is <code>team</code></td>
+</tr>
+<tr class="even">
+<td><code>schedule</code></td>
+<td>text not null</td>
+<td><code>once</code>, <code>daily</code>, <code>weekly</code>. Only
+<code>once</code> is implemented before Slice 10</td>
+</tr>
+<tr class="odd">
+<td><code>due_at</code></td>
+<td>timestamptz null</td>
+<td>Required for <code>once</code></td>
+</tr>
+<tr class="even">
+<td><code>starts_on</code></td>
+<td>date null</td>
+<td>Used by Slice 10 recurrence</td>
+</tr>
+<tr class="odd">
+<td><code>ends_on</code></td>
+<td>date null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>channel</code></td>
+<td>text not null</td>
+<td><code>in_app</code> or <code>whatsapp</code></td>
+</tr>
+<tr class="odd">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><code>assignment_targets</code>: primary key
+<code>(assignment_id, user_id)</code>. Expanded from the team roster at
+assignment time so later roster edits do not change who was asked.</p>
+<p><code>player_occurrences</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>assignment_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>organization_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>player_id</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>window_start</code></td>
+<td>timestamptz not null</td>
+<td>For <code>once</code>, the assignment time</td>
+</tr>
+<tr class="even">
+<td><code>status</code></td>
+<td>text not null</td>
+<td><code>pending</code>, <code>in_progress</code>,
+<code>completed</code>, <code>missed</code></td>
+</tr>
+<tr class="odd">
+<td><code>cursor</code></td>
+<td>int not null default 0</td>
+<td>Next WhatsApp question index</td>
+</tr>
+<tr class="even">
+<td><code>draft_answers</code></td>
+<td>jsonb not null default <code>{}</code></td>
+<td>Not a response</td>
+</tr>
+<tr class="odd">
+<td><code>due_at</code></td>
+<td>timestamptz null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Unique <code>(assignment_id, player_id, window_start)</code>.</p>
+<p><code>responses</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>occurrence_id</code></td>
+<td>uuid unique fk not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>organization_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>player_id</code></td>
+<td>uuid fk users not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>channel</code></td>
+<td>text not null</td>
+<td><code>in_app</code> or <code>whatsapp</code></td>
+</tr>
+<tr class="even">
+<td><code>answers</code></td>
+<td>jsonb not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>questions_snapshot</code></td>
+<td>jsonb not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>submitted_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Trigger: before <code>UPDATE</code> or <code>DELETE</code>, raise an
+exception. Application code only inserts.</p>
+<p>Answer object is a map of question id to value. Rating is an integer.
+<code>yes_no</code> is a boolean. <code>single_choice</code> is the
+option id. <code>short_text</code> is a string. Reject unknown ids,
+missing required answers, and out-of-range values.</p>
+<h3 id="deliveries">deliveries</h3>
+<p>Slice 9. Slice 10 writes reminder rows into the same table.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>uuid pk</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>occurrence_id</code></td>
+<td>uuid fk not null</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>channel</code></td>
+<td>text not null</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>kind</code></td>
+<td>text not null</td>
+<td><code>survey_start</code>, <code>question</code>,
+<code>reminder</code></td>
+</tr>
+<tr class="odd">
+<td><code>status</code></td>
+<td>text not null</td>
+<td><code>queued</code>, <code>sent</code>, <code>delivered</code>,
+<code>read</code>, <code>responded</code>, <code>failed</code></td>
+</tr>
+<tr class="even">
+<td><code>provider_message_id</code></td>
+<td>text null</td>
+<td>Meta message id</td>
+</tr>
+<tr class="odd">
+<td><code>created_at</code></td>
+<td>timestamptz not null</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="training_routines-and-routine_assignments">training_routines and
+routine_assignments</h3>
+<p>Slice 8.</p>
+<p><code>training_routines</code>: <code>id</code>,
+<code>organization_id</code>, <code>team_id</code> null,
+<code>created_by</code>, <code>name</code>, <code>description</code>,
+<code>objective</code>, <code>exercises</code> jsonb,
+<code>duration_minutes</code> int, <code>intensity</code> text null,
+<code>frequency</code> text null, <code>start_date</code>,
+<code>end_date</code> null, <code>instructions</code> text null,
+<code>created_at</code>.</p>
+<p>Exercise item:
+<code>{"name": "Light cycling", "duration_minutes": 10}</code>.</p>
+<p><code>routine_assignments</code>: <code>id</code>,
+<code>routine_id</code>, <code>player_id</code>,
+<code>organization_id</code>, <code>status</code>,
+<code>updated_at</code>. Status is <code>not_started</code>,
+<code>in_progress</code>, or <code>completed</code>. Unique
+<code>(routine_id, player_id)</code>. A player may change status only
+forward: <code>not_started</code> to <code>in_progress</code> to
+<code>completed</code>.</p>
+<h2 id="authorization">Authorization</h2>
+<p>Access tokens are JWTs signed with HS256. Claims are <code>sub</code>
+(user id), <code>exp</code>, and <code>typ=access</code>. Roles are not
+trusted from the token. The auth dependency loads the user, active
+memberships, and team ids from the database on each request.</p>
+<p>Refresh tokens are random URL-safe strings. Only the hash is stored.
+Refresh revokes the presented token and issues a new pair. Login of an
+<code>invited</code> or <code>deactivated</code> user returns
+<code>401</code>.</p>
+<p>Principal:</p>
+<ul>
+<li><code>user_id</code></li>
+<li><code>platform_role</code></li>
+<li>memberships: club id, role, status</li>
+<li><code>team_ids</code> for teams the user belongs to</li>
+</ul>
+<p>Rules:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Action</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Create a club, register a club admin, list clubs</td>
+<td>Superadmin</td>
+</tr>
+<tr class="even">
+<td>Register or deactivate a coach, see club aggregate metrics</td>
+<td>Club admin of that club</td>
+</tr>
+<tr class="odd">
+<td>Create a team, register a player, write questionnaires, assign
+surveys and routines, remind</td>
+<td>Coach of that club, and only for teams they belong to</td>
+</tr>
+<tr class="even">
+<td>Answer an occurrence, update own routine status, read own
+history</td>
+<td>The player on that occurrence or routine</td>
+</tr>
+<tr class="odd">
+<td>Read individual player answers</td>
+<td>Coach on a shared team. Club admin and Superadmin see aggregates
+only</td>
+</tr>
+</tbody>
+</table>
+<p>A coach who is not on the team gets <code>404</code> for that team's
+players and occurrences. A player gets <code>404</code> for another
+player's response.</p>
+<p>Deactivating a membership leaves historical responses in place and
+rejects new logins for that membership's actions. The user row
+stays.</p>
+<h2 id="whatsapp-behavior">WhatsApp behavior</h2>
+<p>Used by Slice 9 and Slice 10. Meta allows a business to send a
+free-form or interactive message only inside the 24-hour window that
+opens when the player messages the business or taps a template button.
+Outside that window the API sends an approved template.</p>
+<p>Two utility templates, approved in Meta before staging:</p>
+<ul>
+<li>Start template. Body parameters: player name, questionnaire name.
+One quick reply, payload <code>START</code>.</li>
+<li>Reminder template. Same parameters. One quick reply, payload
+<code>START</code>.</li>
+</ul>
+<p>Flow:</p>
+<pre class="mermaid">sequenceDiagram
+  participant Coach
+  participant Api
+  participant WhatsApp
+  participant Player
+  Coach->>Api: Assign channel whatsapp
+  Api->>WhatsApp: Start template
+  Player->>WhatsApp: Tap Start
+  WhatsApp->>Api: Webhook type button
+  loop Each question
+    Api->>WhatsApp: Interactive buttons or list
+    Player->>WhatsApp: Tap an option
+    WhatsApp->>Api: Webhook interactive reply
+  end
+  Api->>Api: Insert response</pre>
+<p>State:</p>
+<ul>
+<li>On assign, create occurrences in <code>pending</code> and a
+<code>survey_start</code> delivery. Send the start template. Do not send
+question one yet.</li>
+<li>A <code>START</code> tap from a phone number selects that player's
+latest occurrence in <code>pending</code> or <code>in_progress</code>.
+If it is <code>pending</code>, set <code>in_progress</code> and send
+question <code>cursor</code>.</li>
+<li><code>yes_no</code> is an interactive reply-button message.
+<code>rating</code> and <code>single_choice</code> are interactive list
+messages.</li>
+<li>Reply ids are <code>{occurrence_id}:{question_id}:{value}</code>.
+<code>value</code> is <code>yes</code>, <code>no</code>, the rating
+digit, or the option id.</li>
+<li>Accept a reply only when <code>question_id</code> is the question at
+<code>cursor</code>. Append <code>draft_answers</code>, increment
+<code>cursor</code>, and send the next question.</li>
+<li>When <code>cursor</code> reaches the question count, insert
+<code>responses</code>, set the occurrence to <code>completed</code>,
+and send a short completion message inside the open window.</li>
+<li>A typed message, or a reply for a different question, resends the
+current question and does not change <code>draft_answers</code>.</li>
+<li>A tap after <code>completed</code> sends "Already submitted" and
+does not write a row.</li>
+<li>An in-app submit of an in-progress occurrence inserts the response
+and completes it. Later taps get "Already submitted".</li>
+</ul>
+<p>Webhook:</p>
+<ul>
+<li><code>GET /api/v1/webhooks/whatsapp</code> answers Meta's
+verification challenge.</li>
+<li><code>POST /api/v1/webhooks/whatsapp</code> requires a valid
+<code>X-Hub-Signature-256</code> over the raw body using
+<code>WHATSAPP_APP_SECRET</code>. Invalid signatures return
+<code>401</code>.</li>
+<li>Resolve the player by <code>users.phone_e164</code> equal to the
+sender, compared in E.164 digits.</li>
+<li>Template button taps arrive as message <code>type=button</code>.
+Session taps arrive as <code>type=interactive</code> with
+<code>button_reply</code> or <code>list_reply</code>.</li>
+<li>Status webhooks update <code>deliveries.status</code> by
+<code>provider_message_id</code>.</li>
+</ul>
+<p>Assignment to WhatsApp fails with <code>422</code> when any question
+has type <code>short_text</code>, or when a target player has no
+<code>phone_e164</code>.</p>
+<p>Configuration added in Slice 9: <code>WHATSAPP_TOKEN</code>,
+<code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>WHATSAPP_APP_SECRET</code>,
+<code>WHATSAPP_VERIFY_TOKEN</code>,
+<code>WHATSAPP_TEMPLATE_START</code>,
+<code>WHATSAPP_TEMPLATE_REMINDER</code>.</p>
+<h2 id="web-application">Web application</h2>
+<p>Routes, added by the slice that needs them:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Path</th>
+<th>Slice</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>/login</code></td>
+<td>1</td>
+<td>anyone</td>
+</tr>
+<tr class="even">
+<td><code>/accept-invite</code></td>
+<td>2</td>
+<td>invited user</td>
+</tr>
+<tr class="odd">
+<td><code>/admin/clubs</code></td>
+<td>2</td>
+<td>Superadmin</td>
+</tr>
+<tr class="even">
+<td><code>/club/coaches</code></td>
+<td>2</td>
+<td>Club admin</td>
+</tr>
+<tr class="odd">
+<td><code>/teams</code></td>
+<td>3</td>
+<td>Coach</td>
+</tr>
+<tr class="even">
+<td><code>/questionnaires</code></td>
+<td>4</td>
+<td>Coach</td>
+</tr>
+<tr class="odd">
+<td><code>/assignments/new</code></td>
+<td>5</td>
+<td>Coach</td>
+</tr>
+<tr class="even">
+<td><code>/player</code></td>
+<td>5</td>
+<td>Player, pending form</td>
+</tr>
+<tr class="odd">
+<td><code>/dashboard</code></td>
+<td>6</td>
+<td>Coach</td>
+</tr>
+<tr class="even">
+<td><code>/player/history</code></td>
+<td>7</td>
+<td>Player</td>
+</tr>
+<tr class="odd">
+<td><code>/routines</code></td>
+<td>8</td>
+<td>Coach and player</td>
+</tr>
+<tr class="even">
+<td><code>/club</code></td>
+<td>11</td>
+<td>Club admin aggregates</td>
+</tr>
+</tbody>
+</table>
+<p>The web app stores the access token and refresh token in memory and
+<code>sessionStorage</code>. On <code>401</code>, it calls the refresh
+endpoint once and retries. A failed refresh sends the user to
+<code>/login</code>.</p>
+<p>Screens in each slice are functional forms and lists. Do not
+introduce a component library in these slices.</p>
+<h2 id="slice-0--walking-skeleton">Slice 0 — Walking skeleton</h2>
+<p>Depends on: nothing.</p>
+<p>Build:</p>
+<ul>
+<li><code>compose.yaml</code> with Postgres 16, the API, and the web dev
+server. API and web reload on the host source mount.</li>
+<li>FastAPI app with <code>GET /api/v1/health</code> returning
+<code>{"status": "ok"}</code>.</li>
+<li>Alembic configured and able to run an empty initial revision.</li>
+<li>Vite React app that requests the health endpoint and shows the
+status.</li>
+<li>Script that writes <code>apps/api/openapi.json</code> and generates
+the web types.</li>
+<li>One pytest that boots the app with the test database and asserts the
+health payload.</li>
+</ul>
+<p>Done when:</p>
+<ul>
+<li><code>docker compose up</code> serves the API and the web app.</li>
+<li>The browser shows the health status from the API.</li>
+<li><code>pytest</code> passes against Postgres.</li>
+<li>OpenAPI generation runs without a hand-written client.</li>
+</ul>
+<h2 id="slice-1--identity">Slice 1 — Identity</h2>
+<p>Depends on: Slice 0.</p>
+<p>Build:</p>
+<ul>
+<li>Tables <code>users</code>, <code>organizations</code>,
+<code>memberships</code>, <code>refresh_tokens</code>.</li>
+<li>Startup seed: if no Superadmin exists, create one from
+<code>SUPERADMIN_EMAIL</code> and <code>SUPERADMIN_PASSWORD</code>.</li>
+<li><code>POST /api/v1/auth/login</code> with email and password.
+Returns <code>access_token</code>, <code>refresh_token</code>, and
+<code>token_type</code>.</li>
+<li><code>POST /api/v1/auth/refresh</code> with
+<code>refresh_token</code>. Rotates the refresh token.</li>
+<li><code>POST /api/v1/auth/logout</code> revokes the presented refresh
+token.</li>
+<li><code>GET /api/v1/me</code> returns the user id, name, email,
+<code>platform_role</code>, and memberships.</li>
+<li>Auth dependency and a club-scoped repository helper.</li>
+<li><code>/login</code> screen. After login, show the caller's name and
+role.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Login success and wrong password.</li>
+<li>Refresh rotation rejects the previous refresh token.</li>
+<li><code>GET /me</code> without a token returns <code>401</code>.</li>
+<li>Insert two clubs and a coach membership in one club. A request for
+the other club's id returns <code>404</code>.</li>
+</ul>
+<p>Done when a seeded Superadmin can log in, refresh, and call
+<code>/me</code>, and the cross-club test fails closed.</p>
+<h2 id="slice-2--club-entry">Slice 2 — Club entry</h2>
+<p>Depends on: Slice 1.</p>
+<p>Build:</p>
+<ul>
+<li>Table <code>invitations</code>.</li>
+<li>Invitation service: create invited user if the email is new, or
+reject the email if that user already has a membership in another club.
+Create the membership in <code>invited</code>. Return the invite link
+via the log adapter.</li>
+<li><code>POST /api/v1/organizations</code> Superadmin only. Body: club
+fields plus <code>admin_name</code> and <code>admin_email</code>.
+Creates the club and the club-admin invitation.</li>
+<li><code>GET /api/v1/organizations</code> Superadmin only. Name,
+status, and admin email. No player data.</li>
+<li><code>POST /api/v1/organizations/{organization_id}/coaches</code>
+Club admin of that club. Body: <code>name</code>, <code>email</code>.
+Creates a <code>COACH</code> invitation.</li>
+<li><code>POST /api/v1/auth/accept-invite</code> Body:
+<code>token</code>, <code>password</code>. Sets the password, marks the
+user and membership <code>active</code>, marks the invitation accepted,
+and returns a JWT pair. Passwords are at least 8 characters. Expired or
+reused tokens return <code>400</code>.</li>
+<li>Screens: Superadmin club list and create form. Club admin coach
+registration form. Accept-invite page.</li>
+<li>There is no <code>POST /auth/register</code>.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Superadmin creates a club. A second club admin for the same club
+returns <code>409</code>.</li>
+<li>Club admin registers a coach. The coach cannot log in before
+accepting.</li>
+<li>Accepting the invite lets the coach call <code>/me</code> and see
+the <code>COACH</code> membership.</li>
+<li>A coach calling <code>POST /organizations</code> returns
+<code>403</code>.</li>
+<li>An invitation token is stored only as a hash.</li>
+</ul>
+<p>Done when the path Superadmin, club, club admin, coach, first JWT
+works in the browser, and no public signup route exists.</p>
+<h2 id="slice-3--teams-and-players">Slice 3 — Teams and players</h2>
+<p>Depends on: Slice 2.</p>
+<p>Build:</p>
+<ul>
+<li>Tables <code>teams</code> and <code>team_members</code>. Add
+<code>invitations.team_id</code>.</li>
+<li><code>POST /api/v1/teams</code> Coach. Body: <code>name</code>. The
+coach is added to <code>team_members</code>.</li>
+<li><code>GET /api/v1/teams</code> Coach, only their teams. Club admin,
+all teams in the club without player response data.</li>
+<li><code>POST /api/v1/teams/{team_id}/players</code> Coach on that
+team. Body: <code>name</code>, <code>email</code>,
+<code>phone_e164</code> optional. Creates a <code>PLAYER</code>
+membership and invitation, and a roster row.</li>
+<li>Accept-invite for a player activates the membership. The roster row
+already exists.</li>
+<li><code>GET /api/v1/teams/{team_id}</code> returns the roster for a
+coach on that team.</li>
+<li>Screens: team list, create team, register player, player
+accept-invite landing on an empty home.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>A coach not on the team receives <code>404</code> for that
+team.</li>
+<li>A player membership cannot create a team.</li>
+<li>Registering a player twice in the same club returns
+<code>409</code>.</li>
+<li>Phone values are stored in E.164 or the request returns
+<code>422</code>.</li>
+</ul>
+<p>Done when a coach can create a team, register a player, and the
+player can accept the invite and see an empty home.</p>
+<h2 id="slice-4--questionnaires">Slice 4 — Questionnaires</h2>
+<p>Depends on: Slice 3.</p>
+<p>Build:</p>
+<ul>
+<li>Tables <code>questionnaire_templates</code> and
+<code>questionnaires</code>.</li>
+<li>Seed four templates: <code>daily_readiness</code>,
+<code>weekly_wellness</code>, <code>post_match_recovery</code>,
+<code>training_load</code>. Each uses rating questions only.</li>
+<li><code>GET /api/v1/questionnaire-templates</code> Coach.</li>
+<li><code>POST /api/v1/questionnaires</code> Coach. Body:
+<code>name</code>, <code>description</code>, <code>questions</code>,
+optional <code>template_id</code>. The service validates the question
+document.</li>
+<li><code>GET /api/v1/questionnaires</code> Coach, current club, latest
+version of each lineage.</li>
+<li><code>PATCH /api/v1/questionnaires/{id}</code> Coach and author
+club. If <code>locked_at</code> is null, update in place. If it is set,
+insert the next version.</li>
+<li>Screen: template list, clone, and a form to add questions of each
+type.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>A rating question with a max other than 5 returns
+<code>422</code>.</li>
+<li>A <code>single_choice</code> with 11 options returns
+<code>422</code>.</li>
+<li>A coach in another club gets <code>404</code> for this club's
+questionnaire.</li>
+<li>A player gets <code>403</code> on create.</li>
+</ul>
+<p>Done when a coach can clone Daily Readiness and save a custom
+questionnaire with a yes/no question.</p>
+<h2 id="slice-5--assign-and-answer-in-the-app">Slice 5 — Assign and
+answer in the app</h2>
+<p>Depends on: Slice 4.</p>
+<p>Build:</p>
+<ul>
+<li>Tables <code>assignments</code>, <code>assignment_targets</code>,
+<code>player_occurrences</code>, <code>responses</code>, including the
+immutability trigger.</li>
+<li><code>POST /api/v1/assignments</code> Coach. Body:
+<code>questionnaire_id</code>, <code>target_type</code>,
+<code>team_id</code> or <code>player_ids</code>, <code>due_at</code>,
+<code>channel</code>. Slice 5 accepts <code>channel=in_app</code> and
+<code>schedule=once</code> only. Other values return
+<code>422</code>.</li>
+<li>Creating an assignment locks the questionnaire, copies
+<code>questions_snapshot</code>, expands targets, and inserts one
+pending occurrence per player.</li>
+<li><code>GET /api/v1/player/occurrences</code> Player. Pending and
+completed occurrences for themselves.</li>
+<li><code>POST /api/v1/player/occurrences/{id}/responses</code> Player.
+Body: <code>answers</code>. Validates against the snapshot, inserts the
+response, sets the occurrence <code>completed</code>.</li>
+<li>A second post returns <code>409</code>. A direct SQL update of
+<code>responses</code> raises the trigger exception.</li>
+<li>Screens: coach assignment form. Player home lists pending
+questionnaires and submits one.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Assignment to a team creates one occurrence per current roster
+member.</li>
+<li>Missing a required answer returns <code>422</code> and leaves the
+occurrence pending.</li>
+<li>Second submit returns <code>409</code>.</li>
+<li>A player cannot submit another player's occurrence
+(<code>404</code>).</li>
+<li><code>channel=whatsapp</code> returns <code>422</code> in this
+slice.</li>
+</ul>
+<p>Done when a coach assigns a questionnaire to a team and a player
+submits it once in the browser.</p>
+<h2 id="slice-6--coach-dashboard">Slice 6 — Coach dashboard</h2>
+<p>Depends on: Slice 5.</p>
+<p>Build:</p>
+<ul>
+<li><code>GET /api/v1/teams/{team_id}/dashboard</code> Coach on that
+team.</li>
+<li>Response includes, for the selected questionnaire or the latest
+assignment:
+<ul>
+<li>completion count and roster size</li>
+<li>per-question average for <code>rating</code> questions</li>
+<li>per-question yes count for <code>yes_no</code></li>
+<li>option counts for <code>single_choice</code></li>
+<li>player rows: name, status, submitted time, channel, answers</li>
+<li>attention flags, computed, not stored:
+<ul>
+<li>a rating answer of 4 or 5 on the same question id for two
+consecutive completed occurrences</li>
+<li>the player has no completed response for their last two due
+occurrences</li>
+</ul></li>
+</ul></li>
+<li><code>GET /api/v1/players/{player_id}</code> Coach who shares a team
+with that player. Occurrence history and answers. Club admin receives
+<code>404</code> on this route.</li>
+<li>Screen: team summary, flag list, and a player drill-down.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Averages match a fixture of three responses.</li>
+<li>Two consecutive high ratings produce one flag.</li>
+<li>A coach off the team receives <code>404</code>.</li>
+<li>A club admin token receives <code>404</code> on the player detail
+route.</li>
+</ul>
+<p>Done when the coach can open the dashboard after Slice 5's submission
+and see that player's answers and the team completion count.</p>
+<h2 id="slice-7--player-history">Slice 7 — Player history</h2>
+<p>Depends on: Slice 6.</p>
+<p>Build:</p>
+<ul>
+<li>Extend the player home with history: submitted questionnaires and,
+per rating question, the last five values in order.</li>
+<li><code>GET /api/v1/player/history</code> returns only the caller's
+responses and occurrences.</li>
+<li>Screen shows today's pending items and past submissions.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>A player token cannot read another player's history
+(<code>404</code>).</li>
+<li>History order is <code>submitted_at</code> descending.</li>
+</ul>
+<p>Done when the player who submitted in Slice 5 can see that submission
+on their home screen.</p>
+<h2 id="slice-8--training-routines">Slice 8 — Training routines</h2>
+<p>Depends on: Slice 7.</p>
+<p>Build:</p>
+<ul>
+<li>Tables <code>training_routines</code> and
+<code>routine_assignments</code>.</li>
+<li><code>POST /api/v1/routines</code> Coach. Body matches the routine
+columns. <code>team_id</code> or <code>player_ids</code> expands
+assignments in <code>not_started</code>.</li>
+<li><code>GET /api/v1/routines</code> Coach, their teams. Player, their
+assignments.</li>
+<li><code>POST /api/v1/player/routines/{assignment_id}/status</code>
+Player. Body: <code>status</code>. Only the forward transitions are
+accepted.</li>
+<li>Add routine counts to the coach dashboard: assigned, in progress,
+completed.</li>
+<li>Screens: coach create form, player routine list with the status
+action.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>A player cannot move <code>not_started</code> directly to
+<code>completed</code> (<code>422</code>).</li>
+<li>A player cannot update another player's assignment
+(<code>404</code>).</li>
+<li>The dashboard count increases after a valid transition.</li>
+</ul>
+<p>Done when a coach assigns a routine and the player marks it in
+progress, then completed, and the coach sees the new count.</p>
+<h2 id="slice-9--whatsapp">Slice 9 — WhatsApp</h2>
+<p>Depends on: Slice 8.</p>
+<p>Build:</p>
+<ul>
+<li>Table <code>deliveries</code>.</li>
+<li>Channel port with a Meta adapter and an in-memory adapter. Tests use
+the in-memory adapter.</li>
+<li>Allow <code>channel=whatsapp</code> on create assignment, with the
+<code>short_text</code> and phone checks from <a
+href="#whatsapp-behavior">WhatsApp behavior</a>.</li>
+<li>Webhook verify and receive routes.</li>
+<li>State machine implemented as a service used by the webhook, covered
+without network calls.</li>
+<li>Record a delivery per start template and per question message.</li>
+<li>Apply status callbacks onto deliveries.</li>
+<li>Show the response channel on the coach dashboard. Slice 5 already
+stores <code>channel</code>.</li>
+</ul>
+<p>Tests, using fixture webhook bodies:</p>
+<ul>
+<li>Start tap moves <code>pending</code> to <code>in_progress</code> and
+records the first question payload.</li>
+<li>A list reply for the current question stores a draft and advances
+the cursor.</li>
+<li>A text message does not change <code>draft_answers</code>.</li>
+<li>The last answer inserts one response and a second tap does not
+insert another.</li>
+<li>A bad signature returns <code>401</code>.</li>
+<li>A questionnaire containing <code>short_text</code> cannot be
+assigned to WhatsApp.</li>
+</ul>
+<p>Done when the test suite completes a three-question survey through
+webhook fixtures, and a manual test against Meta is documented with the
+required template names. The manual Meta test is not required for the
+automated done check.</p>
+<h2 id="slice-10--reminders">Slice 10 — Reminders</h2>
+<p>Depends on: Slice 9.</p>
+<p>Build:</p>
+<ul>
+<li><code>POST /api/v1/internal/reminders</code> authenticated by header
+<code>X-Cron-Secret</code> matching <code>CRON_SECRET</code>. No
+JWT.</li>
+<li>The job selects occurrences in <code>pending</code> or
+<code>in_progress</code> whose <code>due_at</code> is within the past 24
+hours and that have no <code>reminder</code> delivery in that window. It
+sends the reminder template and inserts a delivery row.</li>
+<li><code>POST /api/v1/occurrences/{id}/remind</code> Coach on the team.
+Same cap. A second call inside the window returns <code>409</code>.</li>
+<li>Mark an occurrence <code>missed</code> when <code>due_at</code> is
+more than 24 hours ago and status is still <code>pending</code>.</li>
+<li>Dashboard remind button on non-responders.</li>
+<li><code>schedule</code> of <code>daily</code> or <code>weekly</code>
+creates the next occurrence when the job runs, copying the assignment
+snapshot and the current targets. Do this only if the previous window
+has closed.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Two job runs create one reminder delivery.</li>
+<li>The coach remind route returns <code>409</code> on the second
+call.</li>
+<li>An old pending occurrence becomes <code>missed</code>.</li>
+</ul>
+<p>Done when a non-responder appears on the dashboard and the remind
+action sends one recorded reminder.</p>
+<h2 id="slice-11--admin-views">Slice 11 — Admin views</h2>
+<p>Depends on: Slice 10.</p>
+<p>Build:</p>
+<ul>
+<li><code>GET /api/v1/organizations/{id}/metrics</code> Club admin of
+that club, and Superadmin. Counts of coaches, players, active players,
+questionnaire completion across the club, and routine completion. No
+answer payloads and no per-player answer lists.</li>
+<li><code>POST /api/v1/organizations/{id}/coaches/{user_id}/deactivate</code>
+Club admin. Sets that coach membership to <code>deactivated</code>.</li>
+<li><code>POST /api/v1/organizations/{id}/players/{user_id}/deactivate</code>
+Club admin or a coach who shares a team with the player.</li>
+<li>Superadmin club screen links to the aggregate metrics and still has
+no player drill-down.</li>
+<li>Club admin home shows the metrics.</li>
+</ul>
+<p>Tests:</p>
+<ul>
+<li>Metrics match a fixture and the payload contains no
+<code>answers</code> field.</li>
+<li>A coach receives <code>404</code> on another club's metrics.</li>
+<li>Login as a deactivated user returns <code>401</code>. A still-valid
+access token loses the coach membership on the next request, and
+<code>POST /assignments</code> returns <code>403</code>.</li>
+</ul>
+<p>Done when a club admin can open the club home and see completion
+counts after the coach loop has data.</p>
+<h2 id="slice-12--staging">Slice 12 — Staging</h2>
+<p>Depends on: Slice 11. This slice is infrastructure. Do not start it
+before the API slices above are accepted.</p>
+<p>Build in <code>infra/</code> with Terraform:</p>
+<ul>
+<li>One staging environment in one AWS account.</li>
+<li>ECS Fargate service, 0.25 vCPU and 0.5 GB, one task, public subnet,
+public IP. No NAT gateway.</li>
+<li>RDS Postgres, <code>db.t4g.micro</code>, private subnets, security
+group open only to the task security group.</li>
+<li>API image from the same Dockerfile Compose uses.</li>
+<li>Amplify Hosting app for <code>apps/web</code>, staging branch,
+<code>VITE_API_URL</code> set to the staging API origin. Static hosting
+only.</li>
+<li>SSM parameters for the API secrets. The task role can read
+them.</li>
+<li>EventBridge schedule calling
+<code>POST /api/v1/internal/reminders</code> with
+<code>CRON_SECRET</code>.</li>
+<li>FastAPI <code>CORS_ORIGINS</code> includes the Amplify staging
+origin.</li>
+<li>Public HTTPS URL for the WhatsApp webhook.</li>
+</ul>
+<p>Production is the same module with a second workspace, a second
+database, and a second Amplify branch. Do not apply production in this
+slice.</p>
+<p>Done when a staging health check succeeds, the staging web app logs
+in against the staging API, and the webhook URL is reachable from the
+public internet.</p>
+<h2 id="slice-order">Slice order</h2>
+<p>Implement in this order. Each slice assumes the previous one is
+merged.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Slice</th>
+<th>Name</th>
+<th>First user-visible result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Walking skeleton</td>
+<td>Health status on the web app</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Identity</td>
+<td>Superadmin can log in</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Club entry</td>
+<td>Club admin can register a coach</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Teams and players</td>
+<td>Player can accept an invite</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>Questionnaires</td>
+<td>Coach can save a questionnaire</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>Assign and answer</td>
+<td>Player can submit once</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>Coach dashboard</td>
+<td>Coach can see that submission</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>Player history</td>
+<td>Player can see their past answers</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>Training routines</td>
+<td>Player can complete a routine</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>WhatsApp</td>
+<td>Survey completes from button taps</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td>Reminders</td>
+<td>Coach can remind one non-responder</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td>Admin views</td>
+<td>Club admin can see aggregates</td>
+</tr>
+<tr class="odd">
+<td>12</td>
+<td>Staging</td>
+<td>Staging URL serves the app</td>
+</tr>
+</tbody>
+</table>
+<h2 id="references">References</h2>
+<ul>
+<li><a
+href="https://fastapi.tiangolo.com/tutorial/bigger-applications/">FastAPI
+bigger applications</a></li>
+<li><a
+href="https://docs.sqlalchemy.org/en/20/orm/quickstart.html">SQLAlchemy
+2 ORM quickstart</a></li>
+<li><a
+href="https://www.postgresql.org/docs/current/datatype-json.html">PostgreSQL
+JSON types</a></li>
+<li><a
+href="https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/">WhatsApp
+template fundamentals</a></li>
+<li><a
+href="https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/">WhatsApp
+send messages</a></li>
+<li><a
+href="https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-reply-buttons-messages">Interactive
+reply buttons</a></li>
+<li><a
+href="https://developers.facebook.com/docs/whatsapp/cloud-api/messages/interactive-list-messages">Interactive
+list messages</a></li>
+<li><a
+href="https://slchow.com/en/notes/production-fastapi-on-aws">Production
+FastAPI on Lambda or ECS</a></li>
+<li><a
+href="https://docs.aws.amazon.com/decision-guides/latest/decision-guides/fargate-or-lambda.html">AWS
+Fargate or Lambda</a></li>
+<li><a
+href="https://docs.aws.amazon.com/amplify/latest/userguide/welcome.html">Amplify
+Hosting</a></li>
+<li><a href="https://openapi-ts.dev/">openapi-typescript</a></li>
+</ul>
+</body>
+</html>
