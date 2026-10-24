@@ -1,8 +1,14 @@
 import pytest
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.repositories import users as users_repo
-from app.services.seed import SeedError, create_superadmin, validate_superadmin_password
+from app.services.seed import (
+    SeedError,
+    create_superadmin,
+    ensure_superadmin,
+    validate_superadmin_password,
+)
 
 
 def test_validate_superadmin_password_rejects_short() -> None:
@@ -38,3 +44,19 @@ def test_create_superadmin_once(db: Session) -> None:
             email="other@example.com",
             password="another-strong-password",
         )
+
+
+def test_ensure_superadmin_rejects_empty_password(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SUPERADMIN_PASSWORD", "")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SeedError, match="empty"):
+            ensure_superadmin(db)
+        assert users_repo.get_superadmin(db) is None
+    finally:
+        get_settings.cache_clear()
+        # Restore test password for later fixtures in this process.
+        monkeypatch.setenv("SUPERADMIN_PASSWORD", "changeme-superadmin")
+        get_settings.cache_clear()

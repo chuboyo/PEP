@@ -40,17 +40,24 @@ def ensure_superadmin(db: Session) -> None:
     """Create the Superadmin from settings if none exists.
 
     Used by opt-in startup seeding and tests. Does not enforce strong-password
-    rules — use create_superadmin_cli / validate_superadmin_password for prod.
+    rules — use create_superadmin / validate_superadmin_password for prod.
+    Refuses an empty password so startup cannot leave an unusable Superadmin.
     """
     if users_repo.get_superadmin(db) is not None:
         return
 
     settings = get_settings()
+    password = settings.superadmin_password
+    if not password.strip():
+        raise SeedError(
+            "SUPERADMIN_PASSWORD is empty; set a password or use "
+            "`python -m scripts.create_superadmin`."
+        )
     users_repo.create_user(
         db,
         email=settings.superadmin_email,
         name="Superadmin",
-        password_hash=hash_password(settings.superadmin_password),
+        password_hash=hash_password(password),
         status=UserStatus.ACTIVE,
         platform_role=PlatformRole.SUPERADMIN,
     )

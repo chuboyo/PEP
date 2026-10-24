@@ -4,6 +4,9 @@ import os
 # Lifespan seeds via SessionLocal(database_url). Disable before importing app
 # so TestClient startup does not touch the developer pep database.
 os.environ["SEED_SUPERADMIN_ON_STARTUP"] = "false"
+# Compose may inject SUPERADMIN_PASSWORD=""; fixtures need a usable login password.
+if not os.environ.get("SUPERADMIN_PASSWORD", "").strip():
+    os.environ["SUPERADMIN_PASSWORD"] = "changeme-superadmin"
 
 import pytest
 from alembic import command
