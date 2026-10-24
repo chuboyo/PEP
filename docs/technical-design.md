@@ -520,7 +520,7 @@ Depends on: Slice 0.
 Build:
 
 - Tables `users`, `organizations`, `memberships`, `refresh_tokens`.
-- Startup seed: if no Superadmin exists, create one from `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`.
+- Superadmin seed: off by default (`SEED_SUPERADMIN_ON_STARTUP=false`). Create the first admin with `python -m scripts.create_superadmin` (strong password required). Opt-in startup seed from `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` is local-only.
 - `POST /api/v1/auth/login` with email and password. Returns `access_token`, `refresh_token`, and `token_type`.
 - `POST /api/v1/auth/refresh` with `refresh_token`. Rotates the refresh token.
 - `POST /api/v1/auth/logout` revokes the presented refresh token.

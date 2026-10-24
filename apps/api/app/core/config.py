@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     app_public_url: str = "http://localhost:5173"
     superadmin_email: str = "superadmin@example.com"
     superadmin_password: str = "changeme-superadmin"
+    # Off by default: use `python -m scripts.create_superadmin` (esp. prod).
+    # Set true only for local convenience.
+    seed_superadmin_on_startup: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:

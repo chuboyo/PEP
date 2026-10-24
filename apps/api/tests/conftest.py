@@ -1,4 +1,9 @@
 from collections.abc import Generator
+import os
+
+# Lifespan seeds via SessionLocal(database_url). Disable before importing app
+# so TestClient startup does not touch the developer pep database.
+os.environ["SEED_SUPERADMIN_ON_STARTUP"] = "false"
 
 import pytest
 from alembic import command
@@ -10,7 +15,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import get_db
-from app.main import app
 from app.models import (
     Membership,
     MembershipRole,
@@ -22,6 +26,9 @@ from app.models import (
     UserStatus,
 )
 from app.services.seed import ensure_superadmin
+
+get_settings.cache_clear()
+from app.main import app  # noqa: E402
 
 settings = get_settings()
 test_engine = create_engine(settings.test_database_url, pool_pre_ping=True)

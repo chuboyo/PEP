@@ -1,12 +1,14 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/auth";
 import { clearTokens, getAccessToken } from "../auth";
-import { useLogoutMutation, useMeQuery } from "../queries/auth";
+import { clearMeQuery, useLogoutMutation, useMeQuery } from "../queries/auth";
 
 export function HomePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const hasToken = !!getAccessToken();
   const { data: me, isPending, isError, error } = useMeQuery();
   const logoutMutation = useLogoutMutation();
@@ -20,9 +22,10 @@ export function HomePage() {
   useEffect(() => {
     if (error instanceof ApiError && error.status === 401) {
       clearTokens();
+      clearMeQuery(queryClient);
       navigate("/login");
     }
-  }, [error, navigate]);
+  }, [error, navigate, queryClient]);
 
   const membershipRole = me?.memberships[0]?.role;
   const showError =

@@ -13,11 +13,14 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    db = SessionLocal()
-    try:
-        ensure_superadmin(db)
-    finally:
-        db.close()
+    # Uses SessionLocal (database_url), not get_db — so dependency overrides
+    # cannot redirect this. Tests disable it and seed pep_test via fixtures.
+    if get_settings().seed_superadmin_on_startup:
+        db = SessionLocal()
+        try:
+            ensure_superadmin(db)
+        finally:
+            db.close()
     yield
 
 
