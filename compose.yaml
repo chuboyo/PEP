@@ -28,6 +28,8 @@ services:
       REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-14}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:5173}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-superadmin@example.com}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-changeme-superadmin}
     ports:
       - "8000:8000"
     volumes:

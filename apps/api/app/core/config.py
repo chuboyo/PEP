@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     refresh_token_days: int = 14
     cors_origins: str = "http://localhost:5173"
     app_public_url: str = "http://localhost:5173"
+    superadmin_email: str = "superadmin@example.com"
+    superadmin_password: str = "changeme-superadmin"
 
     @property
     def cors_origin_list(self) -> list[str]:

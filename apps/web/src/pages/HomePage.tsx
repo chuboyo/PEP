@@ -1,0 +1,81 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { ApiError } from "../api/auth";
+import { clearTokens, getAccessToken } from "../auth";
+import { useLogoutMutation, useMeQuery } from "../queries/auth";
+
+export function HomePage() {
+  const navigate = useNavigate();
+  const hasToken = !!getAccessToken();
+  const { data: me, isPending, isError, error } = useMeQuery();
+  const logoutMutation = useLogoutMutation();
+
+  useEffect(() => {
+    if (!hasToken) {
+      navigate("/login");
+    }
+  }, [hasToken, navigate]);
+
+  useEffect(() => {
+    if (error instanceof ApiError && error.status === 401) {
+      clearTokens();
+      navigate("/login");
+    }
+  }, [error, navigate]);
+
+  const membershipRole = me?.memberships[0]?.role;
+  const showError =
+    isError && !(error instanceof ApiError && error.status === 401);
+
+  if (!hasToken) {
+    return null;
+  }
+
+  return (
+    <main className="shell shell--center">
+      <div className="panel panel--wide">
+        <header className="topbar">
+          <h1 className="brand">Pep</h1>
+          {me ? (
+            <button
+              className="btn btn--ghost"
+              type="button"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              Log out
+            </button>
+          ) : null}
+        </header>
+
+        {showError ? (
+          <p className="alert" role="alert">
+            {error instanceof Error ? error.message : "Failed to load profile"}
+          </p>
+        ) : null}
+
+        {me ? (
+          <ul className="meta-list">
+            <li>
+              <span className="label">Name</span>
+              <span className="value">{me.name}</span>
+            </li>
+            <li>
+              <span className="label">Platform role</span>
+              <span className="value">{me.platform_role ?? "none"}</span>
+            </li>
+            {membershipRole ? (
+              <li>
+                <span className="label">Membership role</span>
+                <span className="value">{membershipRole}</span>
+              </li>
+            ) : null}
+          </ul>
+        ) : isPending ? (
+          <p className="muted">Loading…</p>
+        ) : null}
+      </div>
+    </main>
+  );
+}
