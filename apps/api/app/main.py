@@ -1,12 +1,30 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.db.session import SessionLocal
+from app.services.seed import ensure_superadmin
 
 settings = get_settings()
 
-app = FastAPI(title="Pep API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Uses SessionLocal (database_url), not get_db — so dependency overrides
+    # cannot redirect this. Tests disable it and seed pep_test via fixtures.
+    if get_settings().seed_superadmin_on_startup:
+        db = SessionLocal()
+        try:
+            ensure_superadmin(db)
+        finally:
+            db.close()
+    yield
+
+
+app = FastAPI(title="Pep API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
