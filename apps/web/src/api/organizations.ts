@@ -1,5 +1,5 @@
+import { ApiError, readError } from "./auth";
 import { apiFetch } from "./client";
-import { ApiError } from "./auth";
 
 export type OrganizationListItem = {
   id: string;
@@ -31,18 +31,6 @@ export type OrganizationCreateInput = {
   location?: string;
   contact_email?: string;
 };
-
-async function readError(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: string };
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-  } catch {
-    // fall through
-  }
-  return `HTTP ${response.status}`;
-}
 
 export async function listOrganizations(): Promise<OrganizationListItem[]> {
   const response = await apiFetch("/api/v1/organizations");

@@ -12,6 +12,7 @@ from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models import MembershipRole, UserStatus
 from app.repositories import organizations as orgs_repo
+from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 
 _bearer = HTTPBearer(auto_error=False)
@@ -43,6 +44,7 @@ def get_current_principal(
         )
 
     memberships = users_repo.list_active_memberships(db, user.id)
+    team_ids = teams_repo.list_team_ids_for_user(db, user.id)
     return Principal(
         user_id=user.id,
         platform_role=user.platform_role.value if user.platform_role else None,
@@ -54,7 +56,7 @@ def get_current_principal(
             )
             for m in memberships
         ],
-        team_ids=[],
+        team_ids=team_ids,
     )
 
 
@@ -80,11 +82,38 @@ def require_club_admin(
 
     role = principal.active_role_in(organization_id)
     if role is None:
-        # No active membership in this club (or other club) → hide existence.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if role != MembershipRole.CLUB_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden",
         )
+    return principal
+
+
+def require_coach(
+    principal: Principal = Depends(get_current_principal),
+) -> Principal:
+    if principal.active_coach_organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return principal
+
+
+def require_coach_on_team(
+    team_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+) -> Principal:
+    team = teams_repo.get_team_by_id(db, team_id)
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    coach_org = principal.active_coach_organization_id
+    if coach_org is None or team.organization_id != coach_org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if not principal.is_on_team(team_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return principal

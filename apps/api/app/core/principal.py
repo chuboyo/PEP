@@ -33,3 +33,20 @@ class Principal:
             if m.organization_id == organization_id and m.status == "active":
                 return m.role
         return None
+
+    @property
+    def active_coach_organization_id(self) -> uuid.UUID | None:
+        for m in self.memberships:
+            if m.status == "active" and m.role == "COACH":
+                return m.organization_id
+        return None
+
+    @property
+    def active_club_admin_organization_id(self) -> uuid.UUID | None:
+        for m in self.memberships:
+            if m.status == "active" and m.role == "CLUB_ADMIN":
+                return m.organization_id
+        return None
+
+    def is_on_team(self, team_id: uuid.UUID) -> bool:
+        return team_id in self.team_ids

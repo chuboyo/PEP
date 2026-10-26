@@ -1,5 +1,3 @@
-from urllib.parse import parse_qs, urlparse
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,24 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.security import hash_invite_token
 from app.models import Invitation, Organization, User
-
-
-def _superadmin_headers(client: TestClient) -> dict[str, str]:
-    settings = get_settings()
-    login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": settings.superadmin_email,
-            "password": settings.superadmin_password,
-        },
-    )
-    assert login.status_code == 200
-    return {"Authorization": f"Bearer {login.json()['access_token']}"}
-
-
-def _token_from_invite_link(invite_link: str) -> str:
-    query = parse_qs(urlparse(invite_link).query)
-    return query["token"][0]
+from tests.helpers import superadmin_headers, token_from_invite_link
 
 
 def test_superadmin_creates_club_and_second_admin_conflicts(
@@ -32,7 +13,7 @@ def test_superadmin_creates_club_and_second_admin_conflicts(
     superadmin: User,
     db: Session,
 ) -> None:
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     created = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -49,7 +30,7 @@ def test_superadmin_creates_club_and_second_admin_conflicts(
     assert "invite_link" in body
     assert "/accept-invite?token=" in body["invite_link"]
 
-    raw_token = _token_from_invite_link(body["invite_link"])
+    raw_token = token_from_invite_link(body["invite_link"])
     invite = db.scalar(select(Invitation))
     assert invite is not None
     assert invite.token_hash == hash_invite_token(raw_token)
@@ -81,7 +62,7 @@ def test_club_admin_registers_coach_flow(
     superadmin: User,
     db: Session,
 ) -> None:
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     club = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -91,7 +72,7 @@ def test_club_admin_registers_coach_flow(
             "admin_email": "clubadmin@example.com",
         },
     ).json()
-    admin_token = _token_from_invite_link(club["invite_link"])
+    admin_token = token_from_invite_link(club["invite_link"])
 
     before = client.post(
         "/api/v1/auth/login",
@@ -113,7 +94,7 @@ def test_club_admin_registers_coach_flow(
     )
     assert coach_invite.status_code == 200
     assert coach_invite.json()["invite_link"]
-    coach_raw = _token_from_invite_link(coach_invite.json()["invite_link"])
+    coach_raw = token_from_invite_link(coach_invite.json()["invite_link"])
 
     blocked_login = client.post(
         "/api/v1/auth/login",
@@ -178,7 +159,7 @@ def test_list_organizations_superadmin_only(
     superadmin: User,
     coach_with_orgs: tuple[User, Organization, Organization],
 ) -> None:
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     listed = client.get("/api/v1/organizations", headers=headers)
     assert listed.status_code == 200
     assert isinstance(listed.json(), list)
@@ -200,7 +181,7 @@ def test_deactivated_membership_can_be_reinvited(
 ) -> None:
     from app.models import Membership, MembershipStatus, UserStatus
 
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     club = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -210,7 +191,7 @@ def test_deactivated_membership_can_be_reinvited(
             "admin_email": "deact-admin@example.com",
         },
     ).json()
-    admin_token = _token_from_invite_link(club["invite_link"])
+    admin_token = token_from_invite_link(club["invite_link"])
     accepted = client.post(
         "/api/v1/auth/accept-invite",
         json={"token": admin_token, "password": "deactadmin1"},
@@ -240,7 +221,7 @@ def test_deactivated_membership_can_be_reinvited(
         json={"name": "Temp Coach", "email": "deact-coach@example.com"},
     )
     assert reinvited.status_code == 200
-    token = _token_from_invite_link(reinvited.json()["invite_link"])
+    token = token_from_invite_link(reinvited.json()["invite_link"])
     ok = client.post(
         "/api/v1/auth/accept-invite",
         json={"token": token, "password": "coachpass12"},
@@ -257,7 +238,7 @@ def test_expired_invite_can_be_reissued(
 
     from app.models import Invitation
 
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     club = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -267,7 +248,7 @@ def test_expired_invite_can_be_reissued(
             "admin_email": "reissue-admin@example.com",
         },
     ).json()
-    admin_token = _token_from_invite_link(club["invite_link"])
+    admin_token = token_from_invite_link(club["invite_link"])
     accepted = client.post(
         "/api/v1/auth/accept-invite",
         json={"token": admin_token, "password": "reissueadmin1"},
@@ -280,7 +261,7 @@ def test_expired_invite_can_be_reissued(
         json={"name": "Casey Coach", "email": "reissue-coach@example.com"},
     )
     assert first.status_code == 200
-    old_token = _token_from_invite_link(first.json()["invite_link"])
+    old_token = token_from_invite_link(first.json()["invite_link"])
 
     invite = db.scalar(
         select(Invitation).where(Invitation.token_hash == hash_invite_token(old_token))
@@ -301,7 +282,7 @@ def test_expired_invite_can_be_reissued(
         json={"name": "Casey Coach", "email": "reissue-coach@example.com"},
     )
     assert reissued.status_code == 200
-    new_token = _token_from_invite_link(reissued.json()["invite_link"])
+    new_token = token_from_invite_link(reissued.json()["invite_link"])
     assert new_token != old_token
 
     ok = client.post(
@@ -316,7 +297,7 @@ def test_cannot_invite_superadmin_email(
     superadmin: User,
 ) -> None:
     settings = get_settings()
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     club = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -326,7 +307,7 @@ def test_cannot_invite_superadmin_email(
             "admin_email": "west-admin@example.com",
         },
     ).json()
-    admin_token = _token_from_invite_link(club["invite_link"])
+    admin_token = token_from_invite_link(club["invite_link"])
     accepted = client.post(
         "/api/v1/auth/accept-invite",
         json={"token": admin_token, "password": "westadmin1"},
@@ -369,7 +350,7 @@ def test_second_club_admin_for_same_club_returns_409(
     from app.models import MembershipRole
     from app.services import invitations as invitations_service
 
-    headers = _superadmin_headers(client)
+    headers = superadmin_headers(client)
     club = client.post(
         "/api/v1/organizations",
         headers=headers,
@@ -379,7 +360,7 @@ def test_second_club_admin_for_same_club_returns_409(
             "admin_email": "first@example.com",
         },
     ).json()
-    token = _token_from_invite_link(club["invite_link"])
+    token = token_from_invite_link(club["invite_link"])
     client.post(
         "/api/v1/auth/accept-invite",
         json={"token": token, "password": "firstadmin1"},
