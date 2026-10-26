@@ -13,7 +13,14 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Keep an explicit URL set by callers (e.g. tests targeting pep_test).
+_current_url = config.get_main_option("sqlalchemy.url")
+if (
+    _current_url is None
+    or _current_url.startswith("%")
+    or _current_url.startswith("driver://")
+):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:

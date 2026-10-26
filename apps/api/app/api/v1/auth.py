@@ -8,6 +8,7 @@ from app.core.principal import Principal
 from app.db.session import get_db
 from app.repositories import users as users_repo
 from app.schemas.auth import (
+    AcceptInviteRequest,
     LoginRequest,
     LogoutRequest,
     MeResponse,
@@ -16,6 +17,7 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.services import auth as auth_service
+from app.services import invitations as invitations_service
 
 router = APIRouter(tags=["auth"])
 
@@ -23,6 +25,11 @@ router = APIRouter(tags=["auth"])
 @router.post("/auth/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     return auth_service.login(db, body.email, body.password)
+
+
+@router.post("/auth/accept-invite", response_model=TokenResponse)
+def accept_invite(body: AcceptInviteRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    return invitations_service.accept_invite(db, token=body.token, password=body.password)
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)

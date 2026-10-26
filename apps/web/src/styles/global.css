@@ -241,6 +241,43 @@ input {
   letter-spacing: -0.02em;
 }
 
+.section-title {
+  font-size: 1.25rem;
+  margin: 1.75rem 0 1rem;
+}
+
+.invite-box {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.invite-box .label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.invite-link {
+  margin: 0;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 @media (max-width: 480px) {
   .panel {
     padding: 1.25rem;

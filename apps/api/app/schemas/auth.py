@@ -10,6 +10,11 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1)
 
 
+class AcceptInviteRequest(BaseModel):
+    token: str = Field(min_length=1)
+    password: str = Field(min_length=8)
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
 

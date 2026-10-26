@@ -5,7 +5,15 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Membership, MembershipStatus, PlatformRole, RefreshToken, User, UserStatus
+from app.models import (
+    Membership,
+    MembershipRole,
+    MembershipStatus,
+    PlatformRole,
+    RefreshToken,
+    User,
+    UserStatus,
+)
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -33,6 +41,22 @@ def list_active_memberships(db: Session, user_id: uuid.UUID) -> list[Membership]
     )
 
 
+def list_memberships_for_user(db: Session, user_id: uuid.UUID) -> list[Membership]:
+    return list(db.scalars(select(Membership).where(Membership.user_id == user_id)).all())
+
+
+def get_club_admin_membership(
+    db: Session, organization_id: uuid.UUID
+) -> Membership | None:
+    return db.scalar(
+        select(Membership).where(
+            Membership.organization_id == organization_id,
+            Membership.role == MembershipRole.CLUB_ADMIN,
+            Membership.status != MembershipStatus.DEACTIVATED,
+        )
+    )
+
+
 def create_user(
     db: Session,
     *,
@@ -52,6 +76,25 @@ def create_user(
     db.add(user)
     db.flush()
     return user
+
+
+def create_membership(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    role: MembershipRole,
+    status: MembershipStatus,
+) -> Membership:
+    membership = Membership(
+        user_id=user_id,
+        organization_id=organization_id,
+        role=role,
+        status=status,
+    )
+    db.add(membership)
+    db.flush()
+    return membership
 
 
 def create_refresh_token(

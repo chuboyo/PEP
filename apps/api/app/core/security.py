@@ -55,3 +55,15 @@ def hash_refresh_token(token: str) -> str:
 def refresh_token_expiry() -> datetime:
     settings = get_settings()
     return datetime.now(UTC) + timedelta(days=settings.refresh_token_days)
+
+
+def generate_invite_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_invite_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def invite_token_expiry() -> datetime:
+    return datetime.now(UTC) + timedelta(days=7)

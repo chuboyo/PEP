@@ -27,3 +27,9 @@ class Principal:
             m.organization_id == organization_id and m.status == "active"
             for m in self.memberships
         )
+
+    def active_role_in(self, organization_id: uuid.UUID) -> str | None:
+        for m in self.memberships:
+            if m.organization_id == organization_id and m.status == "active":
+                return m.role
+        return None

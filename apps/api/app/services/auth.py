@@ -11,7 +11,7 @@ from app.repositories import users as users_repo
 from app.schemas.auth import TokenResponse
 
 
-def _issue_token_pair(db: Session, user_id) -> TokenResponse:
+def issue_token_pair(db: Session, user_id) -> TokenResponse:
     access_token = security.create_access_token(user_id)
     refresh_token = security.generate_refresh_token()
     users_repo.create_refresh_token(
@@ -40,7 +40,7 @@ def login(db: Session, email: str, password: str) -> TokenResponse:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
-    return _issue_token_pair(db, user.id)
+    return issue_token_pair(db, user.id)
 
 
 def refresh(db: Session, refresh_token: str) -> TokenResponse:
@@ -65,7 +65,7 @@ def refresh(db: Session, refresh_token: str) -> TokenResponse:
 
     row.revoked_at = now
     db.flush()
-    return _issue_token_pair(db, user.id)
+    return issue_token_pair(db, user.id)
 
 
 def logout(db: Session, refresh_token: str) -> None:

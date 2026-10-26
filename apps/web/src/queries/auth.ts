@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import { fetchMe, login } from "../api/auth";
+import { acceptInvite, fetchMe, login } from "../api/auth";
 import { logoutApi } from "../api/client";
 import { getAccessToken, setTokens } from "../auth";
 
@@ -47,6 +47,22 @@ export function useLogoutMutation() {
     onSuccess: () => {
       clearMeQuery(queryClient);
       navigate("/login");
+    },
+  });
+}
+
+export function useAcceptInviteMutation() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: ({ token, password }: { token: string; password: string }) =>
+      acceptInvite(token, password),
+    onSuccess: async (tokens) => {
+      setTokens(tokens.access_token, tokens.refresh_token);
+      clearMeQuery(queryClient);
+      await queryClient.invalidateQueries({ queryKey: meQueryKey });
+      navigate("/");
     },
   });
 }
