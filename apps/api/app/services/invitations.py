@@ -19,8 +19,10 @@ from app.models import (
     User,
     UserStatus,
 )
+from app.core.phone import validate_e164
 from app.repositories import invitations as invitations_repo
 from app.repositories import organizations as orgs_repo
+from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 from app.schemas.auth import TokenResponse
 from app.services import auth as auth_service
@@ -32,6 +34,7 @@ class InviteResult:
     organization_id: uuid.UUID
     invite_link: str
     invitee_email: str
+    team_id: uuid.UUID | None = None
 
 
 def _build_invite_link(raw_token: str) -> str:
@@ -101,8 +104,11 @@ def create_invitation_for_email(
     name: str,
     role: MembershipRole,
     created_by: uuid.UUID,
+    team_id: uuid.UUID | None = None,
+    phone_e164: str | None = None,
     delivery: InviteDelivery = default_invite_delivery,
 ) -> InviteResult:
+    phone = validate_e164(phone_e164)
     user, existing_membership = _pending_membership_for_reissue(
         db, email=email, organization_id=organization_id
     )
@@ -117,6 +123,14 @@ def create_invitation_for_email(
                 detail="Club already has a club admin",
             )
 
+    if phone is not None:
+        phone_owner = users_repo.get_user_by_phone(db, phone)
+        if phone_owner is not None and (user is None or phone_owner.id != user.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Phone number is already in use",
+            )
+
     if user is None:
         user = users_repo.create_user(
             db,
@@ -124,10 +138,13 @@ def create_invitation_for_email(
             name=name,
             password_hash=None,
             status=UserStatus.INVITED,
+            phone_e164=phone,
         )
     else:
         user.name = name
         user.status = UserStatus.INVITED
+        if phone is not None:
+            user.phone_e164 = phone
 
     if existing_membership is None:
         users_repo.create_membership(
@@ -138,10 +155,22 @@ def create_invitation_for_email(
             status=MembershipStatus.INVITED,
         )
     else:
-        existing_membership.role = role
+        if existing_membership.role != role:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email is not available for invitation",
+            )
         existing_membership.status = MembershipStatus.INVITED
         invitations_repo.expire_pending_invitations(
             db, user_id=user.id, organization_id=organization_id
+        )
+
+    if team_id is not None:
+        teams_repo.align_player_roster(
+            db,
+            user_id=user.id,
+            organization_id=organization_id,
+            team_id=team_id,
         )
 
     raw_token = security.generate_invite_token()
@@ -154,6 +183,7 @@ def create_invitation_for_email(
         token_hash=token_hash,
         expires_at=security.invite_token_expiry(),
         created_by=created_by,
+        team_id=team_id,
     )
 
     invite_link = _build_invite_link(raw_token)
@@ -163,6 +193,7 @@ def create_invitation_for_email(
         organization_id=organization_id,
         invite_link=invite_link,
         invitee_email=email,
+        team_id=team_id,
     )
 
 
@@ -217,6 +248,32 @@ def invite_coach(
         name=name,
         role=MembershipRole.COACH,
         created_by=principal.user_id,
+        delivery=delivery,
+    )
+
+
+def invite_player(
+    db: Session,
+    *,
+    principal: Principal,
+    team_id: uuid.UUID,
+    name: str,
+    email: str,
+    phone_e164: str | None = None,
+    delivery: InviteDelivery = default_invite_delivery,
+) -> InviteResult:
+    team = teams_repo.get_team_by_id(db, team_id)
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    return create_invitation_for_email(
+        db,
+        organization_id=team.organization_id,
+        email=email,
+        name=name,
+        role=MembershipRole.PLAYER,
+        created_by=principal.user_id,
+        team_id=team_id,
+        phone_e164=phone_e164,
         delivery=delivery,
     )
 

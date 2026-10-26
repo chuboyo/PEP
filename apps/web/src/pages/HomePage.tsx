@@ -32,6 +32,9 @@ export function HomePage() {
   const isClubAdmin = me?.memberships.some(
     (m) => m.role === "CLUB_ADMIN" && m.status === "active",
   );
+  const isCoach = me?.memberships.some(
+    (m) => m.role === "COACH" && m.status === "active",
+  );
   const showError =
     isError && !(error instanceof ApiError && error.status === 401);
 
@@ -94,6 +97,11 @@ export function HomePage() {
               {isClubAdmin ? (
                 <Link className="btn btn--primary" to="/club/coaches">
                   Register coaches
+                </Link>
+              ) : null}
+              {isCoach ? (
+                <Link className="btn btn--primary" to="/teams">
+                  Teams
                 </Link>
               ) : null}
             </nav>

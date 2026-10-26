@@ -19,6 +19,18 @@ export class ApiError extends Error {
   }
 }
 
+export async function readError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: string };
+    if (typeof body.detail === "string") {
+      return body.detail;
+    }
+  } catch {
+    // fall through
+  }
+  return `HTTP ${response.status}`;
+}
+
 export async function login(email: string, password: string): Promise<TokenPair> {
   const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
     method: "POST",
@@ -52,16 +64,7 @@ export async function acceptInvite(
     body: JSON.stringify({ token, password }),
   });
   if (!response.ok) {
-    let message = `HTTP ${response.status}`;
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (typeof body.detail === "string") {
-        message = body.detail;
-      }
-    } catch {
-      // keep status message
-    }
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, await readError(response));
   }
   return (await response.json()) as TokenPair;
 }

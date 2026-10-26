@@ -57,6 +57,10 @@ def get_club_admin_membership(
     )
 
 
+def get_user_by_phone(db: Session, phone_e164: str) -> User | None:
+    return db.scalar(select(User).where(User.phone_e164 == phone_e164))
+
+
 def create_user(
     db: Session,
     *,
@@ -65,6 +69,7 @@ def create_user(
     password_hash: str | None,
     status: UserStatus,
     platform_role: PlatformRole | None = None,
+    phone_e164: str | None = None,
 ) -> User:
     user = User(
         email=email,
@@ -72,6 +77,7 @@ def create_user(
         password_hash=password_hash,
         status=status,
         platform_role=platform_role,
+        phone_e164=phone_e164,
     )
     db.add(user)
     db.flush()
