@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -8,7 +10,8 @@ from sqlalchemy.orm import Session
 from app.core.principal import MembershipInfo, Principal
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import UserStatus
+from app.models import MembershipRole, UserStatus
+from app.repositories import organizations as orgs_repo
 from app.repositories import users as users_repo
 
 _bearer = HTTPBearer(auto_error=False)
@@ -53,3 +56,35 @@ def get_current_principal(
         ],
         team_ids=[],
     )
+
+
+def require_superadmin(
+    principal: Principal = Depends(get_current_principal),
+) -> Principal:
+    if not principal.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return principal
+
+
+def require_club_admin(
+    organization_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+) -> Principal:
+    organization = orgs_repo.get_organization_by_id(db, organization_id)
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    role = principal.active_role_in(organization_id)
+    if role is None:
+        # No active membership in this club (or other club) → hide existence.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if role != MembershipRole.CLUB_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return principal

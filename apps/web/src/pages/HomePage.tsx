@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/auth";
 import { clearTokens, getAccessToken } from "../auth";
@@ -28,6 +28,10 @@ export function HomePage() {
   }, [error, navigate, queryClient]);
 
   const membershipRole = me?.memberships[0]?.role;
+  const isSuperadmin = me?.platform_role === "SUPERADMIN";
+  const isClubAdmin = me?.memberships.some(
+    (m) => m.role === "CLUB_ADMIN" && m.status === "active",
+  );
   const showError =
     isError && !(error instanceof ApiError && error.status === 401);
 
@@ -59,22 +63,41 @@ export function HomePage() {
         ) : null}
 
         {me ? (
-          <ul className="meta-list">
-            <li>
-              <span className="label">Name</span>
-              <span className="value">{me.name}</span>
-            </li>
-            <li>
-              <span className="label">Platform role</span>
-              <span className="value">{me.platform_role ?? "none"}</span>
-            </li>
-            {membershipRole ? (
+          <>
+            <ul className="meta-list">
               <li>
-                <span className="label">Membership role</span>
-                <span className="value">{membershipRole}</span>
+                <span className="label">Name</span>
+                <span className="value">{me.name}</span>
               </li>
-            ) : null}
-          </ul>
+              <li>
+                <span className="label">Platform role</span>
+                <span className="value">{me.platform_role ?? "none"}</span>
+              </li>
+              {membershipRole ? (
+                <li>
+                  <span className="label">Membership role</span>
+                  <span className="value">{membershipRole}</span>
+                </li>
+              ) : null}
+            </ul>
+            <nav className="nav-links">
+              {isSuperadmin ? (
+                <>
+                  <Link className="btn btn--primary" to="/admin/clubs">
+                    All clubs
+                  </Link>
+                  <Link className="btn btn--ghost" to="/admin/clubs/new">
+                    Create club
+                  </Link>
+                </>
+              ) : null}
+              {isClubAdmin ? (
+                <Link className="btn btn--primary" to="/club/coaches">
+                  Register coaches
+                </Link>
+              ) : null}
+            </nav>
+          </>
         ) : isPending ? (
           <p className="muted">Loading…</p>
         ) : null}
