@@ -162,7 +162,12 @@ def create_invitation_for_email(
         )
 
     if team_id is not None:
-        teams_repo.add_team_member(db, team_id=team_id, user_id=user.id)
+        teams_repo.align_player_roster(
+            db,
+            user_id=user.id,
+            organization_id=organization_id,
+            team_id=team_id,
+        )
 
     raw_token = security.generate_invite_token()
     token_hash = security.hash_invite_token(raw_token)

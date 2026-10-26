@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import Team, TeamMember, User
@@ -38,6 +38,28 @@ def add_team_member(
     db.add(row)
     db.flush()
     return row
+
+
+def align_player_roster(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    team_id: uuid.UUID,
+) -> TeamMember:
+    """Place the player on team_id only within the club (moves on re-invite)."""
+    db.execute(
+        delete(TeamMember).where(
+            TeamMember.user_id == user_id,
+            TeamMember.team_id.in_(
+                select(Team.id).where(
+                    Team.organization_id == organization_id,
+                    Team.id != team_id,
+                )
+            ),
+        )
+    )
+    return add_team_member(db, team_id=team_id, user_id=user_id)
 
 
 def get_team_by_id(db: Session, team_id: uuid.UUID) -> Team | None:

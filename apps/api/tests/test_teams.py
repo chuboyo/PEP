@@ -192,6 +192,55 @@ def test_register_player_twice_returns_409(
     assert second.status_code == 409
 
 
+def test_reinvite_player_moves_roster_to_new_team(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    team_a = client.post(
+        "/api/v1/teams",
+        headers=coach_headers,
+        json={"name": "Team A"},
+    ).json()
+    team_b = client.post(
+        "/api/v1/teams",
+        headers=coach_headers,
+        json={"name": "Team B"},
+    ).json()
+
+    first = client.post(
+        f"/api/v1/teams/{team_a['id']}/players",
+        headers=coach_headers,
+        json={"name": "Pat", "email": "move@example.com"},
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"/api/v1/teams/{team_b['id']}/players",
+        headers=coach_headers,
+        json={"name": "Pat", "email": "move@example.com"},
+    )
+    assert second.status_code == 200
+
+    roster_a = client.get(f"/api/v1/teams/{team_a['id']}", headers=coach_headers)
+    roster_b = client.get(f"/api/v1/teams/{team_b['id']}", headers=coach_headers)
+    assert roster_a.status_code == 200
+    assert roster_b.status_code == 200
+    emails_a = {m["email"] for m in roster_a.json()["members"]}
+    emails_b = {m["email"] for m in roster_b.json()["members"]}
+    assert "move@example.com" not in emails_a
+    assert "move@example.com" in emails_b
+
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(second.json()["invite_link"]),
+            "password": "playerpass1",
+        },
+    )
+    assert accepted.status_code == 200
+
+
 def test_invalid_phone_returns_422(
     client: TestClient,
     superadmin: User,
