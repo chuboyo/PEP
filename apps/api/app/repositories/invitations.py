@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import Invitation, MembershipRole
@@ -36,3 +36,22 @@ def create_invitation(
 
 def get_invitation_by_token_hash(db: Session, token_hash: str) -> Invitation | None:
     return db.scalar(select(Invitation).where(Invitation.token_hash == token_hash))
+
+
+def expire_pending_invitations(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> None:
+    """Invalidate outstanding invites so a reissue can mint a fresh token."""
+    now = datetime.now(UTC)
+    db.execute(
+        update(Invitation)
+        .where(
+            Invitation.user_id == user_id,
+            Invitation.organization_id == organization_id,
+            Invitation.accepted_at.is_(None),
+        )
+        .values(expires_at=now)
+    )

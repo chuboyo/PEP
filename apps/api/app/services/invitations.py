@@ -12,9 +12,11 @@ from app.core import security
 from app.core.config import get_settings
 from app.core.principal import Principal
 from app.models import (
+    Membership,
     MembershipRole,
     MembershipStatus,
     OrganizationStatus,
+    User,
     UserStatus,
 )
 from app.repositories import invitations as invitations_repo
@@ -38,29 +40,57 @@ def _build_invite_link(raw_token: str) -> str:
     return f"{base}/accept-invite?{urlencode({'token': raw_token})}"
 
 
-def _ensure_email_allowed_for_org(
+def _pending_membership_for_reissue(
     db: Session,
     *,
     email: str,
     organization_id: uuid.UUID,
-) -> None:
+) -> tuple[User | None, Membership | None]:
+    """Validate the email for invite/reissue.
+
+    Returns (user, existing same-org membership to reuse) when the row is
+    INVITED or DEACTIVATED. Raises 409 for credentialed users or conflicts.
+    """
     user = users_repo.get_user_by_email(db, email)
     if user is None:
-        return
+        return None, None
 
-    memberships = users_repo.list_memberships_for_user(db, user.id)
-    for membership in memberships:
-        if membership.status == MembershipStatus.DEACTIVATED:
-            continue
-        if membership.organization_id != organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User already belongs to another club",
-            )
+    # Never attach invites to platform accounts or users who already have credentials.
+    if user.platform_role is not None or user.password_hash is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="User already has a membership in this club",
+            detail="Email is not available for invitation",
         )
+    if user.status == UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is not available for invitation",
+        )
+
+    reusable_here: Membership | None = None
+    for membership in users_repo.list_memberships_for_user(db, user.id):
+        if membership.organization_id == organization_id:
+            if membership.status == MembershipStatus.ACTIVE:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="User already has a membership in this club",
+                )
+            # Reuse INVITED or DEACTIVATED row — unique (user_id, organization_id).
+            if membership.status in (
+                MembershipStatus.INVITED,
+                MembershipStatus.DEACTIVATED,
+            ):
+                reusable_here = membership
+            continue
+
+        if membership.status == MembershipStatus.DEACTIVATED:
+            continue
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User already belongs to another club",
+        )
+
+    return user, reusable_here
 
 
 def create_invitation_for_email(
@@ -73,17 +103,20 @@ def create_invitation_for_email(
     created_by: uuid.UUID,
     delivery: InviteDelivery = default_invite_delivery,
 ) -> InviteResult:
-    _ensure_email_allowed_for_org(db, email=email, organization_id=organization_id)
+    user, existing_membership = _pending_membership_for_reissue(
+        db, email=email, organization_id=organization_id
+    )
 
     if role == MembershipRole.CLUB_ADMIN:
         existing_admin = users_repo.get_club_admin_membership(db, organization_id)
-        if existing_admin is not None:
+        if existing_admin is not None and (
+            existing_membership is None or existing_admin.id != existing_membership.id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Club already has a club admin",
             )
 
-    user = users_repo.get_user_by_email(db, email)
     if user is None:
         user = users_repo.create_user(
             db,
@@ -94,16 +127,22 @@ def create_invitation_for_email(
         )
     else:
         user.name = name
-        if user.status == UserStatus.DEACTIVATED:
-            user.status = UserStatus.INVITED
+        user.status = UserStatus.INVITED
 
-    users_repo.create_membership(
-        db,
-        user_id=user.id,
-        organization_id=organization_id,
-        role=role,
-        status=MembershipStatus.INVITED,
-    )
+    if existing_membership is None:
+        users_repo.create_membership(
+            db,
+            user_id=user.id,
+            organization_id=organization_id,
+            role=role,
+            status=MembershipStatus.INVITED,
+        )
+    else:
+        existing_membership.role = role
+        existing_membership.status = MembershipStatus.INVITED
+        invitations_repo.expire_pending_invitations(
+            db, user_id=user.id, organization_id=organization_id
+        )
 
     raw_token = security.generate_invite_token()
     token_hash = security.hash_invite_token(raw_token)
@@ -210,7 +249,13 @@ def accept_invite(db: Session, *, token: str, password: str) -> TokenResponse:
         )
 
     user = users_repo.get_user_by_id(db, invitation.user_id)
-    if user is None:
+    # Accept only invitation-only accounts (no credentials / platform role yet).
+    if (
+        user is None
+        or user.status != UserStatus.INVITED
+        or user.password_hash is not None
+        or user.platform_role is not None
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired invitation",

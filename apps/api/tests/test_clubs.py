@@ -193,6 +193,170 @@ def test_list_organizations_superadmin_only(
     assert denied.status_code == 403
 
 
+def test_deactivated_membership_can_be_reinvited(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    from app.models import Membership, MembershipStatus, UserStatus
+
+    headers = _superadmin_headers(client)
+    club = client.post(
+        "/api/v1/organizations",
+        headers=headers,
+        json={
+            "name": "Deact FC",
+            "admin_name": "Club Admin",
+            "admin_email": "deact-admin@example.com",
+        },
+    ).json()
+    admin_token = _token_from_invite_link(club["invite_link"])
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": admin_token, "password": "deactadmin1"},
+    )
+    admin_headers = {"Authorization": f"Bearer {accepted.json()['access_token']}"}
+
+    invited = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Temp Coach", "email": "deact-coach@example.com"},
+    )
+    assert invited.status_code == 200
+
+    coach_rows = db.scalars(
+        select(Membership).where(Membership.organization_id == club["id"])
+    ).all()
+    coach_row = next(m for m in coach_rows if m.role.value == "COACH")
+    coach_row.status = MembershipStatus.DEACTIVATED
+    coach_user = db.get(User, coach_row.user_id)
+    assert coach_user is not None
+    coach_user.status = UserStatus.DEACTIVATED
+    db.commit()
+
+    reinvited = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Temp Coach", "email": "deact-coach@example.com"},
+    )
+    assert reinvited.status_code == 200
+    token = _token_from_invite_link(reinvited.json()["invite_link"])
+    ok = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": token, "password": "coachpass12"},
+    )
+    assert ok.status_code == 200
+
+
+def test_expired_invite_can_be_reissued(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from app.models import Invitation
+
+    headers = _superadmin_headers(client)
+    club = client.post(
+        "/api/v1/organizations",
+        headers=headers,
+        json={
+            "name": "Reissue FC",
+            "admin_name": "Club Admin",
+            "admin_email": "reissue-admin@example.com",
+        },
+    ).json()
+    admin_token = _token_from_invite_link(club["invite_link"])
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": admin_token, "password": "reissueadmin1"},
+    )
+    admin_headers = {"Authorization": f"Bearer {accepted.json()['access_token']}"}
+
+    first = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Casey Coach", "email": "reissue-coach@example.com"},
+    )
+    assert first.status_code == 200
+    old_token = _token_from_invite_link(first.json()["invite_link"])
+
+    invite = db.scalar(
+        select(Invitation).where(Invitation.token_hash == hash_invite_token(old_token))
+    )
+    assert invite is not None
+    invite.expires_at = datetime.now(UTC) - timedelta(days=1)
+    db.commit()
+
+    expired = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": old_token, "password": "coachpass12"},
+    )
+    assert expired.status_code == 400
+
+    reissued = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Casey Coach", "email": "reissue-coach@example.com"},
+    )
+    assert reissued.status_code == 200
+    new_token = _token_from_invite_link(reissued.json()["invite_link"])
+    assert new_token != old_token
+
+    ok = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": new_token, "password": "coachpass12"},
+    )
+    assert ok.status_code == 200
+
+
+def test_cannot_invite_superadmin_email(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    settings = get_settings()
+    headers = _superadmin_headers(client)
+    club = client.post(
+        "/api/v1/organizations",
+        headers=headers,
+        json={
+            "name": "West FC",
+            "admin_name": "Club Admin",
+            "admin_email": "west-admin@example.com",
+        },
+    ).json()
+    admin_token = _token_from_invite_link(club["invite_link"])
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": admin_token, "password": "westadmin1"},
+    )
+    admin_headers = {"Authorization": f"Bearer {accepted.json()['access_token']}"}
+
+    takeover = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Nope", "email": settings.superadmin_email},
+    )
+    assert takeover.status_code == 409
+
+    # Superadmin password and role must remain intact.
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": settings.superadmin_email,
+            "password": settings.superadmin_password,
+        },
+    )
+    assert login.status_code == 200
+    me = client.get(
+        "/api/v1/me",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+    assert me.status_code == 200
+    assert me.json()["platform_role"] == "SUPERADMIN"
+
+
 def test_second_club_admin_for_same_club_returns_409(
     client: TestClient,
     superadmin: User,
