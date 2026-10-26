@@ -155,7 +155,11 @@ def create_invitation_for_email(
             status=MembershipStatus.INVITED,
         )
     else:
-        existing_membership.role = role
+        if existing_membership.role != role:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email is not available for invitation",
+            )
         existing_membership.status = MembershipStatus.INVITED
         invitations_repo.expire_pending_invitations(
             db, user_id=user.id, organization_id=organization_id

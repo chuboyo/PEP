@@ -192,6 +192,79 @@ def test_register_player_twice_returns_409(
     assert second.status_code == 409
 
 
+def test_player_invite_cannot_take_over_pending_coach(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    headers = superadmin_headers(client)
+    club = client.post(
+        "/api/v1/organizations",
+        headers=headers,
+        json={
+            "name": "Role Guard FC",
+            "admin_name": "Club Admin",
+            "admin_email": "role-admin@example.com",
+        },
+    ).json()
+    admin = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(club["invite_link"]),
+            "password": "clubadmin1",
+        },
+    )
+    admin_headers = {"Authorization": f"Bearer {admin.json()['access_token']}"}
+
+    pending_coach = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Pending Coach", "email": "pending-coach@example.com"},
+    )
+    assert pending_coach.status_code == 200
+    pending_token = token_from_invite_link(pending_coach.json()["invite_link"])
+
+    active_coach = client.post(
+        f"/api/v1/organizations/{club['id']}/coaches",
+        headers=admin_headers,
+        json={"name": "Active Coach", "email": "active-coach@example.com"},
+    ).json()
+    coach = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(active_coach["invite_link"]),
+            "password": "coachpass1",
+        },
+    )
+    coach_headers = {"Authorization": f"Bearer {coach.json()['access_token']}"}
+    team = client.post(
+        "/api/v1/teams",
+        headers=coach_headers,
+        json={"name": "U18"},
+    ).json()
+
+    takeover = client.post(
+        f"/api/v1/teams/{team['id']}/players",
+        headers=coach_headers,
+        json={"name": "Pending Coach", "email": "pending-coach@example.com"},
+    )
+    assert takeover.status_code == 409
+
+    # Original coach invite still works.
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={"token": pending_token, "password": "coachpass2"},
+    )
+    assert accepted.status_code == 200
+    me = client.get(
+        "/api/v1/me",
+        headers={"Authorization": f"Bearer {accepted.json()['access_token']}"},
+    )
+    assert me.status_code == 200
+    assert any(
+        m["role"] == "COACH" and m["status"] == "active" for m in me.json()["memberships"]
+    )
+
+
 def test_reinvite_player_moves_roster_to_new_team(
     client: TestClient,
     superadmin: User,
