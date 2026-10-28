@@ -3,41 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Organization, User
-from tests.helpers import superadmin_headers, token_from_invite_link
+from tests.helpers import bootstrap_coach, superadmin_headers, token_from_invite_link
 
 
-def _bootstrap_coach(client: TestClient, superadmin: User) -> tuple[dict[str, str], str]:
-    """Create club + coach; return coach headers and organization id."""
-    headers = superadmin_headers(client)
-    club = client.post(
-        "/api/v1/organizations",
-        headers=headers,
-        json={
-            "name": "Teams FC",
-            "admin_name": "Club Admin",
-            "admin_email": "teams-admin@example.com",
-        },
-    ).json()
-    admin_token = token_from_invite_link(club["invite_link"])
-    admin = client.post(
-        "/api/v1/auth/accept-invite",
-        json={"token": admin_token, "password": "clubadmin1"},
-    )
-    admin_headers = {"Authorization": f"Bearer {admin.json()['access_token']}"}
-
-    coach_invite = client.post(
-        f"/api/v1/organizations/{club['id']}/coaches",
-        headers=admin_headers,
-        json={"name": "Casey Coach", "email": "teams-coach@example.com"},
-    ).json()
-    coach_token = token_from_invite_link(coach_invite["invite_link"])
-    coach = client.post(
-        "/api/v1/auth/accept-invite",
-        json={"token": coach_token, "password": "coachpass1"},
-    )
-    return (
-        {"Authorization": f"Bearer {coach.json()['access_token']}"},
-        club["id"],
+def _coach(client: TestClient) -> tuple[dict[str, str], str]:
+    return bootstrap_coach(
+        client,
+        club_name="Teams FC",
+        admin_email="teams-admin@example.com",
+        coach_email="teams-coach@example.com",
     )
 
 
@@ -46,7 +20,7 @@ def test_coach_creates_team_registers_player_and_player_accepts(
     superadmin: User,
     db: Session,
 ) -> None:
-    coach_headers, _org_id = _bootstrap_coach(client, superadmin)
+    coach_headers, _org_id = _coach(client)
 
     team = client.post(
         "/api/v1/teams",
@@ -103,7 +77,7 @@ def test_coach_not_on_team_gets_404(
     superadmin: User,
     coach_with_orgs: tuple[User, Organization, Organization],
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    coach_headers, _ = _coach(client)
     team = client.post(
         "/api/v1/teams",
         headers=coach_headers,
@@ -132,7 +106,7 @@ def test_player_cannot_create_team(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    coach_headers, _ = _coach(client)
     team = client.post(
         "/api/v1/teams",
         headers=coach_headers,
@@ -164,7 +138,7 @@ def test_register_player_twice_returns_409(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    coach_headers, _ = _coach(client)
     team = client.post(
         "/api/v1/teams",
         headers=coach_headers,
@@ -269,7 +243,7 @@ def test_reinvite_player_moves_roster_to_new_team(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    coach_headers, _ = _coach(client)
     team_a = client.post(
         "/api/v1/teams",
         headers=coach_headers,
@@ -318,7 +292,7 @@ def test_invalid_phone_returns_422(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client, superadmin)
+    coach_headers, _ = _coach(client)
     team = client.post(
         "/api/v1/teams",
         headers=coach_headers,

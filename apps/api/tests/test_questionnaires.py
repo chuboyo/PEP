@@ -6,50 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User
 from app.repositories import questionnaires as questionnaires_repo
-from tests.helpers import superadmin_headers, token_from_invite_link
-
-
-def _bootstrap_coach(
-    client: TestClient,
-    *,
-    club_name: str = "Q FC",
-    admin_email: str = "q-admin@example.com",
-    coach_email: str = "q-coach@example.com",
-) -> tuple[dict[str, str], str]:
-    headers = superadmin_headers(client)
-    club = client.post(
-        "/api/v1/organizations",
-        headers=headers,
-        json={
-            "name": club_name,
-            "admin_name": "Club Admin",
-            "admin_email": admin_email,
-        },
-    ).json()
-    admin = client.post(
-        "/api/v1/auth/accept-invite",
-        json={
-            "token": token_from_invite_link(club["invite_link"]),
-            "password": "clubadmin1",
-        },
-    )
-    admin_headers = {"Authorization": f"Bearer {admin.json()['access_token']}"}
-    coach_invite = client.post(
-        f"/api/v1/organizations/{club['id']}/coaches",
-        headers=admin_headers,
-        json={"name": "Casey Coach", "email": coach_email},
-    ).json()
-    coach = client.post(
-        "/api/v1/auth/accept-invite",
-        json={
-            "token": token_from_invite_link(coach_invite["invite_link"]),
-            "password": "coachpass1",
-        },
-    )
-    return (
-        {"Authorization": f"Bearer {coach.json()['access_token']}"},
-        club["id"],
-    )
+from tests.helpers import bootstrap_coach, token_from_invite_link
 
 
 def _valid_yes_no_questions() -> list[dict]:
@@ -67,7 +24,7 @@ def test_list_templates_and_create_from_daily_readiness(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(client)
+    coach_headers, _ = bootstrap_coach(client)
 
     templates = client.get(
         "/api/v1/questionnaire-templates", headers=coach_headers
@@ -103,7 +60,7 @@ def test_create_custom_with_yes_no(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(
+    coach_headers, _ = bootstrap_coach(
         client,
         club_name="Custom Q FC",
         admin_email="custom-admin@example.com",
@@ -126,7 +83,7 @@ def test_rating_max_not_5_returns_422(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(
+    coach_headers, _ = bootstrap_coach(
         client,
         club_name="Rating FC",
         admin_email="rating-admin@example.com",
@@ -156,7 +113,7 @@ def test_single_choice_11_options_returns_422(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(
+    coach_headers, _ = bootstrap_coach(
         client,
         club_name="Choice FC",
         admin_email="choice-admin@example.com",
@@ -188,7 +145,7 @@ def test_coach_other_club_gets_404(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_a, _ = _bootstrap_coach(
+    coach_a, _ = bootstrap_coach(
         client,
         club_name="Club A Q",
         admin_email="a-admin@example.com",
@@ -205,7 +162,7 @@ def test_coach_other_club_gets_404(
     assert created.status_code == 200
     qid = created.json()["id"]
 
-    coach_b, _ = _bootstrap_coach(
+    coach_b, _ = bootstrap_coach(
         client,
         club_name="Club B Q",
         admin_email="b-admin@example.com",
@@ -223,7 +180,7 @@ def test_player_create_returns_403(
     client: TestClient,
     superadmin: User,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(
+    coach_headers, _ = bootstrap_coach(
         client,
         club_name="Player Q FC",
         admin_email="pq-admin@example.com",
@@ -265,7 +222,7 @@ def test_patch_locked_creates_new_version(
     superadmin: User,
     db: Session,
 ) -> None:
-    coach_headers, _ = _bootstrap_coach(
+    coach_headers, _ = bootstrap_coach(
         client,
         club_name="Lock FC",
         admin_email="lock-admin@example.com",

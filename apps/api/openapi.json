@@ -730,6 +730,140 @@
           }
         }
       }
+    },
+    "/api/v1/assignments": {
+      "post": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "Create Assignment",
+        "operationId": "create_assignment_api_v1_assignments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/player/occurrences": {
+      "get": {
+        "tags": [
+          "player"
+        ],
+        "summary": "List My Occurrences",
+        "operationId": "list_my_occurrences_api_v1_player_occurrences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerOccurrenceOut"
+                  },
+                  "type": "array",
+                  "title": "Response List My Occurrences Api V1 Player Occurrences Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/player/occurrences/{occurrence_id}/responses": {
+      "post": {
+        "tags": [
+          "player"
+        ],
+        "summary": "Submit Occurrence Response",
+        "operationId": "submit_occurrence_response_api_v1_player_occurrences__occurrence_id__responses_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "occurrence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Occurrence Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OccurrenceResponseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -753,6 +887,185 @@
           "password"
         ],
         "title": "AcceptInviteRequest"
+      },
+      "AssignmentChannel": {
+        "type": "string",
+        "enum": [
+          "in_app",
+          "whatsapp"
+        ],
+        "title": "AssignmentChannel"
+      },
+      "AssignmentCreate": {
+        "properties": {
+          "questionnaire_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionnaire Id"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/AssignmentTargetType"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          },
+          "player_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Ids"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AssignmentChannel",
+            "default": "in_app"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/AssignmentSchedule",
+            "default": "once"
+          }
+        },
+        "type": "object",
+        "required": [
+          "questionnaire_id",
+          "target_type"
+        ],
+        "title": "AssignmentCreate"
+      },
+      "AssignmentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Organization Id"
+          },
+          "questionnaire_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionnaire Id"
+          },
+          "questions_snapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions Snapshot"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/AssignmentTargetType"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/AssignmentSchedule"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AssignmentChannel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "occurrence_count": {
+            "type": "integer",
+            "title": "Occurrence Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "questionnaire_id",
+          "questions_snapshot",
+          "created_by",
+          "target_type",
+          "team_id",
+          "schedule",
+          "due_at",
+          "channel",
+          "created_at",
+          "occurrence_count"
+        ],
+        "title": "AssignmentOut"
+      },
+      "AssignmentSchedule": {
+        "type": "string",
+        "enum": [
+          "once",
+          "daily",
+          "weekly"
+        ],
+        "title": "AssignmentSchedule"
+      },
+      "AssignmentTargetType": {
+        "type": "string",
+        "enum": [
+          "team",
+          "players"
+        ],
+        "title": "AssignmentTargetType"
       },
       "CoachInviteCreate": {
         "properties": {
@@ -925,6 +1238,73 @@
           "status"
         ],
         "title": "MembershipOut"
+      },
+      "OccurrenceResponseCreate": {
+        "properties": {
+          "answers": {
+            "type": "object",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "title": "OccurrenceResponseCreate"
+      },
+      "OccurrenceResponseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "occurrence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Occurrence Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Organization Id"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AssignmentChannel"
+          },
+          "answers": {
+            "type": "object",
+            "title": "Answers"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "occurrence_id",
+          "organization_id",
+          "player_id",
+          "channel",
+          "answers",
+          "submitted_at"
+        ],
+        "title": "OccurrenceResponseOut"
+      },
+      "OccurrenceStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "in_progress",
+          "completed",
+          "missed"
+        ],
+        "title": "OccurrenceStatus"
       },
       "OrganizationCreate": {
         "properties": {
@@ -1222,6 +1602,80 @@
           "invite_link"
         ],
         "title": "PlayerInviteCreated"
+      },
+      "PlayerOccurrenceOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Organization Id"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OccurrenceStatus"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "questionnaire_name": {
+            "type": "string",
+            "title": "Questionnaire Name"
+          },
+          "questions": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assignment_id",
+          "organization_id",
+          "player_id",
+          "status",
+          "due_at",
+          "window_start",
+          "questionnaire_name",
+          "questions",
+          "created_at"
+        ],
+        "title": "PlayerOccurrenceOut"
       },
       "QuestionnaireCreate": {
         "properties": {
