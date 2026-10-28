@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.services.seed import ensure_superadmin
+from app.services.seed import ensure_questionnaire_templates, ensure_superadmin
 
 settings = get_settings()
 
@@ -14,13 +14,15 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Uses SessionLocal (database_url), not get_db — so dependency overrides
-    # cannot redirect this. Tests disable it and seed pep_test via fixtures.
-    if get_settings().seed_superadmin_on_startup:
-        db = SessionLocal()
-        try:
+    # cannot redirect this. Tests disable superadmin seed and seed pep_test
+    # via fixtures; templates are seeded into the app DB on startup.
+    db = SessionLocal()
+    try:
+        if get_settings().seed_superadmin_on_startup:
             ensure_superadmin(db)
-        finally:
-            db.close()
+        ensure_questionnaire_templates(db)
+    finally:
+        db.close()
     yield
 
 

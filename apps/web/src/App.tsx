@@ -4,10 +4,13 @@ import { AcceptInvitePage } from "./pages/AcceptInvitePage";
 import { AdminClubsListPage } from "./pages/AdminClubsListPage";
 import { AdminClubsPage } from "./pages/AdminClubsPage";
 import { ClubCoachesPage } from "./pages/ClubCoachesPage";
+import { CreateQuestionnairePage } from "./pages/CreateQuestionnairePage";
 import { CreateTeamPage } from "./pages/CreateTeamPage";
+import { EditQuestionnairePage } from "./pages/EditQuestionnairePage";
 import { HomePage } from "./pages/HomePage";
 import { InvitePlayerPage } from "./pages/InvitePlayerPage";
 import { LoginPage } from "./pages/LoginPage";
+import { QuestionnairesPage } from "./pages/QuestionnairesPage";
 import { TeamDetailPage } from "./pages/TeamDetailPage";
 import { TeamsPage } from "./pages/TeamsPage";
 
@@ -25,6 +28,12 @@ export function App() {
       <Route
         path="/teams/:teamId/players/new"
         element={<InvitePlayerPage />}
+      />
+      <Route path="/questionnaires" element={<QuestionnairesPage />} />
+      <Route path="/questionnaires/new" element={<CreateQuestionnairePage />} />
+      <Route
+        path="/questionnaires/:questionnaireId/edit"
+        element={<EditQuestionnairePage />}
       />
       <Route path="/" element={<HomePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />

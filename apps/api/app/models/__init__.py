@@ -5,6 +5,7 @@ from app.models.enums import (
     PlatformRole,
     UserStatus,
 )
+from app.models.questionnaire import Questionnaire, QuestionnaireTemplate
 from app.models.team import Team, TeamMember
 from app.models.user import Invitation, Membership, Organization, RefreshToken, User
 
@@ -16,6 +17,8 @@ __all__ = [
     "Invitation",
     "Team",
     "TeamMember",
+    "Questionnaire",
+    "QuestionnaireTemplate",
     "UserStatus",
     "PlatformRole",
     "OrganizationStatus",

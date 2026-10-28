@@ -100,9 +100,14 @@ export function HomePage() {
                 </Link>
               ) : null}
               {isCoach ? (
-                <Link className="btn btn--primary" to="/teams">
-                  Teams
-                </Link>
+                <>
+                  <Link className="btn btn--primary" to="/teams">
+                    Teams
+                  </Link>
+                  <Link className="btn btn--ghost" to="/questionnaires">
+                    Questionnaires
+                  </Link>
+                </>
               ) : null}
             </nav>
           </>

@@ -210,6 +210,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/questionnaire-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_api_v1_questionnaire_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Questionnaires */
+        get: operations["list_questionnaires_api_v1_questionnaires_get"];
+        put?: never;
+        /** Create Questionnaire */
+        post: operations["create_questionnaire_api_v1_questionnaires_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/questionnaires/{questionnaire_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Questionnaire */
+        patch: operations["update_questionnaire_api_v1_questionnaires__questionnaire_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -398,6 +450,83 @@ export interface components {
             email: string;
             /** Invite Link */
             invite_link: string;
+        };
+        /** QuestionnaireCreate */
+        QuestionnaireCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Questions */
+            questions: Record<string, never>[];
+            /** Template Id */
+            template_id?: string | null;
+        };
+        /** QuestionnaireOut */
+        QuestionnaireOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Template Id */
+            template_id: string | null;
+            /** Version */
+            version: number;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string | null;
+            /** Questions */
+            questions: Record<string, never>[];
+            /** Schema Version */
+            schema_version: number;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Locked At */
+            locked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** QuestionnaireTemplateOut */
+        QuestionnaireTemplateOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string | null;
+            /** Questions */
+            questions: Record<string, never>[];
+            /** Schema Version */
+            schema_version: number;
+        };
+        /** QuestionnaireUpdate */
+        QuestionnaireUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Questions */
+            questions?: Record<string, never>[] | null;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -882,6 +1011,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerInviteCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_questionnaire_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireTemplateOut"][];
+                };
+            };
+        };
+    };
+    list_questionnaires_api_v1_questionnaires_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireOut"][];
+                };
+            };
+        };
+    };
+    create_questionnaire_api_v1_questionnaires_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_questionnaire_api_v1_questionnaires__questionnaire_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionnaire_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionnaireUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionnaireOut"];
                 };
             };
             /** @description Validation Error */
