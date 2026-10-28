@@ -35,6 +35,9 @@ export function HomePage() {
   const isCoach = me?.memberships.some(
     (m) => m.role === "COACH" && m.status === "active",
   );
+  const isPlayer = me?.memberships.some(
+    (m) => m.role === "PLAYER" && m.status === "active",
+  );
   const showError =
     isError && !(error instanceof ApiError && error.status === 401);
 
@@ -107,7 +110,15 @@ export function HomePage() {
                   <Link className="btn btn--ghost" to="/questionnaires">
                     Questionnaires
                   </Link>
+                  <Link className="btn btn--ghost" to="/assignments/new">
+                    Assign
+                  </Link>
                 </>
+              ) : null}
+              {isPlayer ? (
+                <Link className="btn btn--primary" to="/player">
+                  My questionnaires
+                </Link>
               ) : null}
             </nav>
           </>

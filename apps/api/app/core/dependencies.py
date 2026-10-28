@@ -102,6 +102,20 @@ def require_coach(
     return principal
 
 
+def require_player(
+    principal: Principal = Depends(get_current_principal),
+) -> Principal:
+    if not any(
+        m.status == "active" and m.role == MembershipRole.PLAYER.value
+        for m in principal.memberships
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return principal
+
+
 def require_coach_on_team(
     team_id: uuid.UUID,
     principal: Principal = Depends(get_current_principal),

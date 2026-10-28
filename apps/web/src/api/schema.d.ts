@@ -262,6 +262,57 @@ export interface paths {
         patch: operations["update_questionnaire_api_v1_questionnaires__questionnaire_id__patch"];
         trace?: never;
     };
+    "/api/v1/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Assignment */
+        post: operations["create_assignment_api_v1_assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/player/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Occurrences */
+        get: operations["list_my_occurrences_api_v1_player_occurrences_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/player/occurrences/{occurrence_id}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Occurrence Response */
+        post: operations["submit_occurrence_response_api_v1_player_occurrences__occurrence_id__responses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -273,6 +324,79 @@ export interface components {
             /** Password */
             password: string;
         };
+        /**
+         * AssignmentChannel
+         * @enum {string}
+         */
+        AssignmentChannel: "in_app" | "whatsapp";
+        /** AssignmentCreate */
+        AssignmentCreate: {
+            /**
+             * Questionnaire Id
+             * Format: uuid
+             */
+            questionnaire_id: string;
+            target_type: components["schemas"]["AssignmentTargetType"];
+            /** Team Id */
+            team_id?: string | null;
+            /** Player Ids */
+            player_ids?: string[] | null;
+            /** Due At */
+            due_at?: string | null;
+            /** @default in_app */
+            channel: components["schemas"]["AssignmentChannel"];
+            /** @default once */
+            schedule: components["schemas"]["AssignmentSchedule"];
+        };
+        /** AssignmentOut */
+        AssignmentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Questionnaire Id
+             * Format: uuid
+             */
+            questionnaire_id: string;
+            /** Questions Snapshot */
+            questions_snapshot: Record<string, never>[];
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            target_type: components["schemas"]["AssignmentTargetType"];
+            /** Team Id */
+            team_id: string | null;
+            schedule: components["schemas"]["AssignmentSchedule"];
+            /** Due At */
+            due_at: string | null;
+            channel: components["schemas"]["AssignmentChannel"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Occurrence Count */
+            occurrence_count: number;
+        };
+        /**
+         * AssignmentSchedule
+         * @enum {string}
+         */
+        AssignmentSchedule: "once" | "daily" | "weekly";
+        /**
+         * AssignmentTargetType
+         * @enum {string}
+         */
+        AssignmentTargetType: "team" | "players";
         /** CoachInviteCreate */
         CoachInviteCreate: {
             /** Name */
@@ -348,6 +472,47 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** OccurrenceResponseCreate */
+        OccurrenceResponseCreate: {
+            /** Answers */
+            answers?: Record<string, never>;
+        };
+        /** OccurrenceResponseOut */
+        OccurrenceResponseOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurrence Id
+             * Format: uuid
+             */
+            occurrence_id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            channel: components["schemas"]["AssignmentChannel"];
+            /** Answers */
+            answers: Record<string, never>;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
+        /**
+         * OccurrenceStatus
+         * @enum {string}
+         */
+        OccurrenceStatus: "pending" | "in_progress" | "completed" | "missed";
         /** OrganizationCreate */
         OrganizationCreate: {
             /** Name */
@@ -450,6 +615,46 @@ export interface components {
             email: string;
             /** Invite Link */
             invite_link: string;
+        };
+        /** PlayerOccurrenceOut */
+        PlayerOccurrenceOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            status: components["schemas"]["OccurrenceStatus"];
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+            /** Questionnaire Name */
+            questionnaire_name: string;
+            /** Questions */
+            questions: Record<string, never>[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** QuestionnaireCreate */
         QuestionnaireCreate: {
@@ -1119,6 +1324,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionnaireOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_assignment_api_v1_assignments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_occurrences_api_v1_player_occurrences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerOccurrenceOut"][];
+                };
+            };
+        };
+    };
+    submit_occurrence_response_api_v1_player_occurrences__occurrence_id__responses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                occurrence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OccurrenceResponseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseOut"];
                 };
             };
             /** @description Validation Error */

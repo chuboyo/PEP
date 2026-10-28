@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func, text
+from sqlalchemy import DateTime, ForeignKey, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import CITEXT, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,16 +15,7 @@ from app.models.enums import (
     PlatformRole,
     UserStatus,
 )
-
-
-def _pg_enum(enum_cls: type[PyEnum], name: str) -> Enum:
-    return Enum(
-        enum_cls,
-        name=name,
-        native_enum=True,
-        values_callable=lambda members: [member.value for member in members],
-        create_type=False,
-    )
+from app.models.types import pg_enum
 
 
 class User(Base):
@@ -38,9 +28,9 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     phone_e164: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
-    status: Mapped[UserStatus] = mapped_column(_pg_enum(UserStatus, "user_status"), nullable=False)
+    status: Mapped[UserStatus] = mapped_column(pg_enum(UserStatus, "user_status"), nullable=False)
     platform_role: Mapped[PlatformRole | None] = mapped_column(
-        _pg_enum(PlatformRole, "platform_role"), nullable=True
+        pg_enum(PlatformRole, "platform_role"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -73,7 +63,7 @@ class Organization(Base):
     logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     contact_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[OrganizationStatus] = mapped_column(
-        _pg_enum(OrganizationStatus, "organization_status"), nullable=False
+        pg_enum(OrganizationStatus, "organization_status"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -105,10 +95,10 @@ class Membership(Base):
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
     role: Mapped[MembershipRole] = mapped_column(
-        _pg_enum(MembershipRole, "membership_role"), nullable=False
+        pg_enum(MembershipRole, "membership_role"), nullable=False
     )
     status: Mapped[MembershipStatus] = mapped_column(
-        _pg_enum(MembershipStatus, "membership_status"), nullable=False
+        pg_enum(MembershipStatus, "membership_status"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -150,7 +140,7 @@ class Invitation(Base):
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
     role: Mapped[MembershipRole] = mapped_column(
-        _pg_enum(MembershipRole, "membership_role"), nullable=False
+        pg_enum(MembershipRole, "membership_role"), nullable=False
     )
     team_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True
