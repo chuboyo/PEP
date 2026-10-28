@@ -305,3 +305,17 @@ def test_patch_locked_creates_new_version(
     ids = {q["id"] for q in listed.json()}
     assert body["id"] in ids
     assert qid not in ids
+
+    # Re-PATCHing the locked ancestor must not fork the lineage.
+    forked = client.patch(
+        f"/api/v1/questionnaires/{qid}",
+        headers=coach_headers,
+        json={"name": "Forked"},
+    )
+    assert forked.status_code == 409
+
+    listed_again = client.get("/api/v1/questionnaires", headers=coach_headers)
+    assert listed_again.status_code == 200
+    assert [q["id"] for q in listed_again.json() if q["name"].startswith("Lock")] == [
+        body["id"]
+    ]

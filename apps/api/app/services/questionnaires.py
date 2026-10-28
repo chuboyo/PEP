@@ -121,6 +121,12 @@ def update_questionnaire(
         db.refresh(row)
         return row
 
+    if questionnaires_repo.has_successor(db, row.id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Questionnaire already has a newer version",
+        )
+
     next_row = questionnaires_repo.create_questionnaire(
         db,
         organization_id=row.organization_id,

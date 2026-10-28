@@ -48,7 +48,22 @@ export function EditQuestionnairePage() {
     );
   }
 
-  if (listQuery.isError || !questionnaire) {
+  if (listQuery.isError) {
+    return (
+      <main className="shell shell--center">
+        <div className="panel panel--wide">
+          <p className="alert" role="alert">
+            Could not load questionnaires
+          </p>
+          <Link className="btn btn--ghost" to="/questionnaires">
+            All questionnaires
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!questionnaire) {
     return (
       <main className="shell shell--center">
         <div className="panel panel--wide">

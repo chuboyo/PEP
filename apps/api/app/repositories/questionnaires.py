@@ -96,6 +96,17 @@ def get_questionnaire_by_id(
     return db.get(Questionnaire, questionnaire_id)
 
 
+def has_successor(db: Session, questionnaire_id: uuid.UUID) -> bool:
+    return (
+        db.scalar(
+            select(Questionnaire.id).where(
+                Questionnaire.supersedes_id == questionnaire_id
+            ).limit(1)
+        )
+        is not None
+    )
+
+
 def list_latest_for_organization(
     db: Session, organization_id: uuid.UUID
 ) -> list[Questionnaire]:
