@@ -1,12 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 import uuid
 
-from app.models import User
+from app.models import TeamMember, User
 from app.repositories import questionnaires as questionnaires_repo
 from tests.helpers import (
     bootstrap_coach,
@@ -419,3 +419,108 @@ def test_response_immutable_via_sql(
     except Exception as exc:
         db.rollback()
         assert "immutable" in str(exc).lower()
+
+
+def test_player_target_requires_shared_team_in_assignment_org(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    """Cross-org team overlap must not authorize player-target assign in org A."""
+    coach_a_headers, org_a_id = bootstrap_coach(
+        client,
+        club_name="Scope FC",
+        admin_email="scope-admin@example.com",
+        coach_email="scope-coach-a@example.com",
+    )
+    questionnaire_id = _create_questionnaire(client, coach_a_headers)
+
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "scope-admin@example.com", "password": "clubadmin1"},
+    )
+    assert admin_login.status_code == 200
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    coach2_invite = client.post(
+        f"/api/v1/organizations/{org_a_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Other Coach", "email": "scope-coach-b@example.com"},
+    ).json()
+    coach2 = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(coach2_invite["invite_link"]),
+            "password": "coachpass2",
+        },
+    )
+    assert coach2.status_code == 200
+    coach2_headers = {
+        "Authorization": f"Bearer {coach2.json()['access_token']}"
+    }
+
+    player_headers, _, player_email = bootstrap_player_on_team(
+        client,
+        coach2_headers,
+        team_name="Coach B Squad",
+        player_email="scope-player@example.com",
+    )
+    me = client.get("/api/v1/me", headers=player_headers)
+    assert me.status_code == 200
+    player_id = me.json()["id"]
+
+    coach_other_club_headers, _ = bootstrap_coach(
+        client,
+        club_name="Other Club FC",
+        admin_email="otherclub-admin@example.com",
+        coach_email="otherclub-coach@example.com",
+    )
+    overlap_team = client.post(
+        "/api/v1/teams",
+        headers=coach_other_club_headers,
+        json={"name": "Overlap Squad"},
+    ).json()
+
+    coach_a = db.scalar(
+        select(User).where(User.email == "scope-coach-a@example.com")
+    )
+    player = db.scalar(select(User).where(User.email == player_email))
+    assert coach_a is not None and player is not None
+    db.add_all(
+        [
+            TeamMember(team_id=uuid.UUID(overlap_team["id"]), user_id=coach_a.id),
+            TeamMember(team_id=uuid.UUID(overlap_team["id"]), user_id=player.id),
+        ]
+    )
+    db.commit()
+
+    due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    denied = client.post(
+        "/api/v1/assignments",
+        headers=coach_a_headers,
+        json={
+            "questionnaire_id": questionnaire_id,
+            "target_type": "players",
+            "player_ids": [player_id],
+            "due_at": due,
+            "channel": "in_app",
+            "schedule": "once",
+        },
+    )
+    assert denied.status_code == 404
+
+    allowed = client.post(
+        "/api/v1/assignments",
+        headers=coach2_headers,
+        json={
+            "questionnaire_id": questionnaire_id,
+            "target_type": "players",
+            "player_ids": [player_id],
+            "due_at": due,
+            "channel": "in_app",
+            "schedule": "once",
+        },
+    )
+    assert allowed.status_code == 200
+    assert allowed.json()["occurrence_count"] == 1

@@ -20,6 +20,7 @@ from app.models import (
     PlayerOccurrence,
     Questionnaire,
     Response,
+    Team,
     TeamMember,
 )
 
@@ -107,10 +108,19 @@ def list_player_ids_on_team(
 
 
 def player_shares_team_with_coach(
-    db: Session, *, coach_user_id: uuid.UUID, player_user_id: uuid.UUID
+    db: Session,
+    *,
+    coach_user_id: uuid.UUID,
+    player_user_id: uuid.UUID,
+    organization_id: uuid.UUID,
 ) -> bool:
-    coach_teams = select(TeamMember.team_id).where(
-        TeamMember.user_id == coach_user_id
+    coach_teams = (
+        select(TeamMember.team_id)
+        .join(Team, Team.id == TeamMember.team_id)
+        .where(
+            TeamMember.user_id == coach_user_id,
+            Team.organization_id == organization_id,
+        )
     )
     return (
         db.scalar(

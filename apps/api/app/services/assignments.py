@@ -159,7 +159,10 @@ def _resolve_target_player_ids(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
             )
         if not assignments_repo.player_shares_team_with_coach(
-            db, coach_user_id=principal.user_id, player_user_id=player_id
+            db,
+            coach_user_id=principal.user_id,
+            player_user_id=player_id,
+            organization_id=organization_id,
         ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
