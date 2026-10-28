@@ -28,7 +28,7 @@ from app.models import (
     User,
     UserStatus,
 )
-from app.services.seed import ensure_superadmin
+from app.services.seed import ensure_questionnaire_templates, ensure_superadmin
 
 get_settings.cache_clear()
 from app.main import app  # noqa: E402
@@ -43,6 +43,11 @@ def migrate_test_database() -> None:
     cfg = Config("alembic.ini")
     cfg.set_main_option("sqlalchemy.url", settings.test_database_url)
     command.upgrade(cfg, "head")
+    session = TestSessionLocal()
+    try:
+        ensure_questionnaire_templates(session)
+    finally:
+        session.close()
 
 
 @pytest.fixture()
@@ -50,8 +55,8 @@ def db() -> Generator[Session, None, None]:
     with test_engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE team_members, teams, invitations, refresh_tokens, "
-                "memberships, organizations, users "
+                "TRUNCATE questionnaires, team_members, teams, invitations, "
+                "refresh_tokens, memberships, organizations, users "
                 "RESTART IDENTITY CASCADE"
             )
         )

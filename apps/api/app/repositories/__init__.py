@@ -1,3 +1,3 @@
-from app.repositories import invitations, organizations, teams, users
+from app.repositories import invitations, organizations, questionnaires, teams, users
 
-__all__ = ["invitations", "organizations", "teams", "users"]
+__all__ = ["invitations", "organizations", "questionnaires", "teams", "users"]

@@ -38,6 +38,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Volume mount can outpace an unrebuild image; pin entrypoint from the mount.
+    entrypoint: ["/app/docker/entrypoint.sh"]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   web:
