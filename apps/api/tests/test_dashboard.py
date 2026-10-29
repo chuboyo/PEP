@@ -42,8 +42,9 @@ def _assign_team(
     *,
     questionnaire_id: str,
     team_id: str,
+    due_at: datetime | None = None,
 ) -> None:
-    due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    due = (due_at or (datetime.now(UTC) + timedelta(days=1))).isoformat()
     assigned = client.post(
         "/api/v1/assignments",
         headers=coach_headers,
@@ -271,6 +272,93 @@ def test_club_admin_gets_404_on_player_detail(
         headers=admin_headers,
     )
     assert denied.status_code == 404
+
+
+def test_future_assignments_do_not_produce_missed_streak(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    coach_headers, _ = bootstrap_coach(
+        client,
+        club_name="FutureMiss FC",
+        admin_email="futuremiss-admin@example.com",
+        coach_email="futuremiss-coach@example.com",
+    )
+    questionnaire_id = _create_rating_questionnaire(client, coach_headers)
+    _, team_id, _ = bootstrap_player_on_team(
+        client,
+        coach_headers,
+        team_name="FutureMiss Squad",
+        player_email="futuremiss-player@example.com",
+    )
+    _assign_team(
+        client,
+        coach_headers,
+        questionnaire_id=questionnaire_id,
+        team_id=team_id,
+        due_at=datetime.now(UTC) + timedelta(days=2),
+    )
+    _assign_team(
+        client,
+        coach_headers,
+        questionnaire_id=questionnaire_id,
+        team_id=team_id,
+        due_at=datetime.now(UTC) + timedelta(days=3),
+    )
+
+    dashboard = client.get(
+        f"/api/v1/teams/{team_id}/dashboard",
+        headers=coach_headers,
+    )
+    assert dashboard.status_code == 200
+    missed = [
+        f for f in dashboard.json()["flags"] if f["type"] == "missed_streak"
+    ]
+    assert missed == []
+
+
+def test_two_past_due_without_response_produce_missed_streak(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    coach_headers, _ = bootstrap_coach(
+        client,
+        club_name="PastMiss FC",
+        admin_email="pastmiss-admin@example.com",
+        coach_email="pastmiss-coach@example.com",
+    )
+    questionnaire_id = _create_rating_questionnaire(client, coach_headers)
+    _, team_id, _ = bootstrap_player_on_team(
+        client,
+        coach_headers,
+        team_name="PastMiss Squad",
+        player_email="pastmiss-player@example.com",
+    )
+    _assign_team(
+        client,
+        coach_headers,
+        questionnaire_id=questionnaire_id,
+        team_id=team_id,
+        due_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    _assign_team(
+        client,
+        coach_headers,
+        questionnaire_id=questionnaire_id,
+        team_id=team_id,
+        due_at=datetime.now(UTC) - timedelta(days=1),
+    )
+
+    dashboard = client.get(
+        f"/api/v1/teams/{team_id}/dashboard",
+        headers=coach_headers,
+    )
+    assert dashboard.status_code == 200
+    missed = [
+        f for f in dashboard.json()["flags"] if f["type"] == "missed_streak"
+    ]
+    assert len(missed) == 1
+    assert missed[0]["player_name"] == "Pat Player"
 
 
 def test_dashboard_shows_submitted_player_answers(

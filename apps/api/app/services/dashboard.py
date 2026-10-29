@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -234,12 +235,20 @@ def _compute_attention_flags(
     for occurrence, response in history:
         by_player[occurrence.player_id].append((occurrence, response))
 
+    now = datetime.now(UTC)
     flags: list[AttentionFlagOut] = []
     for player_id, rows in by_player.items():
         player_name = roster_names[player_id]
 
-        # Missed streak: last two due occurrences have no completed response.
-        last_two_due = rows[:2]
+        # Missed streak: last two already-due occurrences have no completed
+        # response. Future due_at rows are ignored so upcoming assigns do not
+        # flag non-responders early.
+        already_due = [
+            (occurrence, response)
+            for occurrence, response in rows
+            if occurrence.due_at is not None and occurrence.due_at <= now
+        ]
+        last_two_due = already_due[:2]
         if len(last_two_due) == 2 and all(
             response is None or occurrence.status != OccurrenceStatus.COMPLETED
             for occurrence, response in last_two_due

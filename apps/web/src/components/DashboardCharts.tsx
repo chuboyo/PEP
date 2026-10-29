@@ -12,12 +12,17 @@ import {
 } from "recharts";
 
 import type { QuestionStat } from "../api/dashboard";
+import type { Question } from "../api/questionnaires";
 
 const ACCENT = "#1f6b45";
 const ACCENT_SOFT = "#8fb9a1";
 const INK_MUTED = "#4a5c52";
 const REMAINING = "#c5d0c9";
 const CHOICE_PALETTE = ["#1f6b45", "#2d8a5c", "#5aa882", "#8fb9a1", "#b7d0c2"];
+
+function optionLabel(question: Question | undefined, optionId: string): string {
+  return question?.options?.find((o) => o.id === optionId)?.label ?? optionId;
+}
 
 type CompletionChartProps = {
   completed: number;
@@ -73,11 +78,13 @@ export function CompletionChart({ completed, rosterSize }: CompletionChartProps)
 type QuestionStatChartProps = {
   stat: QuestionStat;
   responseCount: number;
+  question?: Question;
 };
 
 export function QuestionStatChart({
   stat,
   responseCount,
+  question,
 }: QuestionStatChartProps) {
   if (stat.question_type === "rating") {
     const average = stat.average ?? 0;
@@ -148,11 +155,15 @@ export function QuestionStatChart({
   }
 
   if (stat.question_type === "single_choice" && stat.option_counts) {
-    const data = Object.entries(stat.option_counts).map(([name, value]) => ({
-      name,
+    const data = Object.entries(stat.option_counts).map(([optionId, value]) => ({
+      name: optionLabel(question, optionId),
       value,
     }));
     const hasData = data.some((row) => row.value > 0);
+    const labelWidth = Math.min(
+      140,
+      Math.max(72, ...data.map((row) => row.name.length * 7)),
+    );
     return (
       <div className="chart-card">
         <h3 className="chart-card__title">{stat.prompt}</h3>
@@ -172,16 +183,16 @@ export function QuestionStatChart({
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={72}
+                  width={labelWidth}
                   tick={{ fill: INK_MUTED, fontSize: 12 }}
                 />
                 <Tooltip
                   contentStyle={{ borderRadius: 8, borderColor: "rgba(20,32,26,0.12)" }}
                 />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
-                  {data.map((_, index) => (
+                  {data.map((row, index) => (
                     <Cell
-                      key={data[index].name}
+                      key={row.name}
                       fill={CHOICE_PALETTE[index % CHOICE_PALETTE.length]}
                     />
                   ))}

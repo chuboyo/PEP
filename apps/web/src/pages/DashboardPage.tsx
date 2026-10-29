@@ -85,98 +85,115 @@ export function DashboardPage() {
           </div>
         </header>
 
-        <label className="field">
-          <span className="label">Team</span>
-          <select
-            value={teamId}
-            onChange={(event) => onTeamChange(event.target.value)}
-            disabled={teamsQuery.isPending}
-          >
-            {(teamsQuery.data ?? []).map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {dashboardQuery.isPending ? (
+        {teamsQuery.isPending ? (
           <p className="muted">Loading…</p>
-        ) : dashboardQuery.isError ? (
+        ) : teamsQuery.isError ? (
           <p className="alert" role="alert">
-            Could not load dashboard
+            Could not load teams
           </p>
-        ) : !dashboard ? null : (
+        ) : (teamsQuery.data?.length ?? 0) === 0 ? (
+          <p className="muted">
+            No teams yet.{" "}
+            <Link to="/teams/new">Create a team</Link> to open the dashboard.
+          </p>
+        ) : (
           <>
-            <h2 className="section-title">Summary</h2>
-            <p className="lede lede--tight">
-              {dashboard.questionnaire_name ?? "No assignment yet"}
-            </p>
-            <div className="chart-grid">
-              <CompletionChart
-                completed={dashboard.completion_count}
-                rosterSize={dashboard.roster_size}
-              />
-            </div>
+            <label className="field">
+              <span className="label">Team</span>
+              <select
+                value={teamId}
+                onChange={(event) => onTeamChange(event.target.value)}
+              >
+                {(teamsQuery.data ?? []).map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            {dashboard.question_stats.length > 0 ? (
+            {!teamId || dashboardQuery.isPending ? (
+              <p className="muted">Loading…</p>
+            ) : dashboardQuery.isError ? (
+              <p className="alert" role="alert">
+                Could not load dashboard
+              </p>
+            ) : !dashboard ? null : (
               <>
-                <h2 className="section-title">Question stats</h2>
+                <h2 className="section-title">Summary</h2>
+                <p className="lede lede--tight">
+                  {dashboard.questionnaire_name ?? "No assignment yet"}
+                </p>
                 <div className="chart-grid">
-                  {dashboard.question_stats.map((stat) => (
-                    <QuestionStatChart
-                      key={stat.question_id}
-                      stat={stat}
-                      responseCount={dashboard.completion_count}
-                    />
-                  ))}
+                  <CompletionChart
+                    completed={dashboard.completion_count}
+                    rosterSize={dashboard.roster_size}
+                  />
                 </div>
+
+                {dashboard.question_stats.length > 0 ? (
+                  <>
+                    <h2 className="section-title">Question stats</h2>
+                    <div className="chart-grid">
+                      {dashboard.question_stats.map((stat) => (
+                        <QuestionStatChart
+                          key={stat.question_id}
+                          stat={stat}
+                          responseCount={dashboard.completion_count}
+                          question={dashboard.questions_snapshot.find(
+                            (q) => q.id === stat.question_id,
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+
+                <h2 className="section-title">Attention flags</h2>
+                {dashboard.flags.length === 0 ? (
+                  <p className="muted">No flags.</p>
+                ) : (
+                  <ul className="meta-list">
+                    {dashboard.flags.map((flag) => (
+                      <li
+                        key={`${flag.type}-${flag.player_id}-${flag.question_id ?? ""}`}
+                      >
+                        <span className="label">{flag.player_name}</span>
+                        <span className="value">{flagLabel(flag)}</span>
+                        <Link
+                          className="btn btn--ghost"
+                          to={`/players/${flag.player_id}`}
+                        >
+                          View
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <h2 className="section-title">Players</h2>
+                {dashboard.players.length === 0 ? (
+                  <p className="muted">No assignment responses yet.</p>
+                ) : (
+                  <ul className="meta-list">
+                    {dashboard.players.map((player) => (
+                      <li key={player.player_id}>
+                        <span className="label">{player.name}</span>
+                        <span className="value">{player.status}</span>
+                        {player.channel ? (
+                          <span className="muted">{player.channel}</span>
+                        ) : null}
+                        <Link
+                          className="btn btn--ghost"
+                          to={`/players/${player.player_id}`}
+                        >
+                          Detail
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </>
-            ) : null}
-
-            <h2 className="section-title">Attention flags</h2>
-            {dashboard.flags.length === 0 ? (
-              <p className="muted">No flags.</p>
-            ) : (
-              <ul className="meta-list">
-                {dashboard.flags.map((flag) => (
-                  <li
-                    key={`${flag.type}-${flag.player_id}-${flag.question_id ?? ""}`}
-                  >
-                    <span className="label">{flag.player_name}</span>
-                    <span className="value">{flagLabel(flag)}</span>
-                    <Link
-                      className="btn btn--ghost"
-                      to={`/players/${flag.player_id}`}
-                    >
-                      View
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <h2 className="section-title">Players</h2>
-            {dashboard.players.length === 0 ? (
-              <p className="muted">No assignment responses yet.</p>
-            ) : (
-              <ul className="meta-list">
-                {dashboard.players.map((player) => (
-                  <li key={player.player_id}>
-                    <span className="label">{player.name}</span>
-                    <span className="value">{player.status}</span>
-                    {player.channel ? (
-                      <span className="muted">{player.channel}</span>
-                    ) : null}
-                    <Link
-                      className="btn btn--ghost"
-                      to={`/players/${player.player_id}`}
-                    >
-                      Detail
-                    </Link>
-                  </li>
-                ))}
-              </ul>
             )}
           </>
         )}
