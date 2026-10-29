@@ -119,9 +119,14 @@ export function HomePage() {
                 </>
               ) : null}
               {isPlayer ? (
-                <Link className="btn btn--primary" to="/player">
-                  My questionnaires
-                </Link>
+                <>
+                  <Link className="btn btn--primary" to="/player">
+                    My questionnaires
+                  </Link>
+                  <Link className="btn btn--ghost" to="/player/history">
+                    History
+                  </Link>
+                </>
               ) : null}
             </nav>
           </>

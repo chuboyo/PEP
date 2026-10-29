@@ -327,3 +327,23 @@ def list_player_occurrence_history(
         (occurrence, assignment, name, response)
         for occurrence, assignment, name, response in rows
     ]
+
+
+def list_player_submissions(
+    db: Session, *, player_id: uuid.UUID
+) -> list[tuple[PlayerOccurrence, Assignment, str | None, Response]]:
+    """Completed responses for a player, newest submitted_at first."""
+    rows = db.execute(
+        select(PlayerOccurrence, Assignment, Questionnaire.name, Response)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .join(Response, Response.occurrence_id == PlayerOccurrence.id)
+        .outerjoin(
+            Questionnaire, Questionnaire.id == Assignment.questionnaire_id
+        )
+        .where(PlayerOccurrence.player_id == player_id)
+        .order_by(Response.submitted_at.desc())
+    ).all()
+    return [
+        (occurrence, assignment, name, response)
+        for occurrence, assignment, name, response in rows
+    ]

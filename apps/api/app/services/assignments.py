@@ -25,6 +25,11 @@ from app.repositories import questionnaires as questionnaires_repo
 from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 from app.schemas.answers import validate_answers
+from app.schemas.player_history import (
+    PlayerHistoryItemOut,
+    PlayerHistoryOut,
+    RatingTrendOut,
+)
 
 
 def _require_coach_org(principal: Principal) -> uuid.UUID:
@@ -204,6 +209,59 @@ def list_occurrences_for_player(
         }
         for occurrence, assignment, questionnaire_name in rows
     ]
+
+
+def get_player_history(db: Session, *, principal: Principal) -> PlayerHistoryOut:
+    rows = assignments_repo.list_player_submissions(db, player_id=principal.user_id)
+    submissions = [
+        PlayerHistoryItemOut(
+            occurrence_id=occurrence.id,
+            assignment_id=assignment.id,
+            questionnaire_id=assignment.questionnaire_id,
+            questionnaire_name=questionnaire_name or "Questionnaire",
+            status=occurrence.status,
+            channel=response.channel,
+            submitted_at=response.submitted_at,
+            due_at=occurrence.due_at,
+            answers=response.answers,
+            questions_snapshot=response.questions_snapshot,
+        )
+        for occurrence, assignment, questionnaire_name, response in rows
+    ]
+    return PlayerHistoryOut(
+        submissions=submissions,
+        rating_trends=_build_rating_trends(submissions),
+    )
+
+
+def _build_rating_trends(
+    submissions: list[PlayerHistoryItemOut],
+) -> list[RatingTrendOut]:
+    # Walk oldest → newest so "last five" keeps the most recent values.
+    chronological = list(reversed(submissions))
+    series: dict[str, RatingTrendOut] = {}
+    for item in chronological:
+        questions_by_id = {
+            q["id"]: q for q in item.questions_snapshot if isinstance(q, dict)
+        }
+        for qid, value in item.answers.items():
+            question = questions_by_id.get(qid)
+            if question is None or question.get("type") != "rating":
+                continue
+            if not isinstance(value, int) or isinstance(value, bool):
+                continue
+            trend = series.get(qid)
+            if trend is None:
+                trend = RatingTrendOut(
+                    question_id=qid,
+                    prompt=question.get("prompt", qid),
+                    values=[],
+                )
+                series[qid] = trend
+            trend.values.append(value)
+            if len(trend.values) > 5:
+                trend.values = trend.values[-5:]
+    return list(series.values())
 
 
 def submit_occurrence_response(

@@ -13,6 +13,7 @@ import { HomePage } from "./pages/HomePage";
 import { InvitePlayerPage } from "./pages/InvitePlayerPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlayerDetailPage } from "./pages/PlayerDetailPage";
+import { PlayerHistoryPage } from "./pages/PlayerHistoryPage";
 import { PlayerPage } from "./pages/PlayerPage";
 import { QuestionnairesPage } from "./pages/QuestionnairesPage";
 import { TeamDetailPage } from "./pages/TeamDetailPage";
@@ -42,6 +43,7 @@ export function App() {
       <Route path="/assignments/new" element={<CreateAssignmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/players/:playerId" element={<PlayerDetailPage />} />
+      <Route path="/player/history" element={<PlayerHistoryPage />} />
       <Route path="/player" element={<PlayerPage />} />
       <Route path="/" element={<HomePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />

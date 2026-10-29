@@ -13,6 +13,7 @@ from app.schemas.assignments import (
     OccurrenceResponseOut,
     PlayerOccurrenceOut,
 )
+from app.schemas.player_history import PlayerHistoryOut
 from app.services import assignments as assignments_service
 
 router = APIRouter(tags=["player"])
@@ -25,6 +26,14 @@ def list_my_occurrences(
 ) -> list[PlayerOccurrenceOut]:
     rows = assignments_service.list_occurrences_for_player(db, principal=principal)
     return [PlayerOccurrenceOut(**row) for row in rows]
+
+
+@router.get("/player/history", response_model=PlayerHistoryOut)
+def get_my_history(
+    principal: Principal = Depends(require_player),
+    db: Session = Depends(get_db),
+) -> PlayerHistoryOut:
+    return assignments_service.get_player_history(db, principal=principal)
 
 
 @router.post(

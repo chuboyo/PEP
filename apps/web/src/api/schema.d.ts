@@ -313,6 +313,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/player/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My History */
+        get: operations["get_my_history_api_v1_player_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/player/occurrences/{occurrence_id}/responses": {
         parameters: {
             query?: never;
@@ -669,6 +686,46 @@ export interface components {
             /** Occurrences */
             occurrences: components["schemas"]["PlayerOccurrenceHistoryOut"][];
         };
+        /** PlayerHistoryItemOut */
+        PlayerHistoryItemOut: {
+            /**
+             * Occurrence Id
+             * Format: uuid
+             */
+            occurrence_id: string;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Questionnaire Id
+             * Format: uuid
+             */
+            questionnaire_id: string;
+            /** Questionnaire Name */
+            questionnaire_name: string;
+            status: components["schemas"]["OccurrenceStatus"];
+            channel: components["schemas"]["AssignmentChannel"] | null;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+            /** Due At */
+            due_at: string | null;
+            /** Answers */
+            answers: Record<string, never>;
+            /** Questions Snapshot */
+            questions_snapshot: Record<string, never>[];
+        };
+        /** PlayerHistoryOut */
+        PlayerHistoryOut: {
+            /** Submissions */
+            submissions: components["schemas"]["PlayerHistoryItemOut"][];
+            /** Rating Trends */
+            rating_trends: components["schemas"]["RatingTrendOut"][];
+        };
         /** PlayerInviteCreate */
         PlayerInviteCreate: {
             /** Name */
@@ -861,6 +918,15 @@ export interface components {
             description?: string | null;
             /** Questions */
             questions?: Record<string, never>[] | null;
+        };
+        /** RatingTrendOut */
+        RatingTrendOut: {
+            /** Question Id */
+            question_id: string;
+            /** Prompt */
+            prompt: string;
+            /** Values */
+            values: number[];
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -1574,6 +1640,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerOccurrenceOut"][];
+                };
+            };
+        };
+    };
+    get_my_history_api_v1_player_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerHistoryOut"];
                 };
             };
         };
