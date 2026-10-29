@@ -872,6 +872,32 @@
         ]
       }
     },
+    "/api/v1/player/history": {
+      "get": {
+        "tags": [
+          "player"
+        ],
+        "summary": "Get My History",
+        "operationId": "get_my_history_api_v1_player_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerHistoryOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/player/occurrences/{occurrence_id}/responses": {
       "post": {
         "tags": [
@@ -1785,6 +1811,108 @@
         ],
         "title": "PlayerDetailOut"
       },
+      "PlayerHistoryItemOut": {
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Occurrence Id"
+          },
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "questionnaire_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionnaire Id"
+          },
+          "questionnaire_name": {
+            "type": "string",
+            "title": "Questionnaire Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OccurrenceStatus"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "answers": {
+            "type": "object",
+            "title": "Answers"
+          },
+          "questions_snapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions Snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurrence_id",
+          "assignment_id",
+          "questionnaire_id",
+          "questionnaire_name",
+          "status",
+          "channel",
+          "submitted_at",
+          "due_at",
+          "answers",
+          "questions_snapshot"
+        ],
+        "title": "PlayerHistoryItemOut"
+      },
+      "PlayerHistoryOut": {
+        "properties": {
+          "submissions": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerHistoryItemOut"
+            },
+            "type": "array",
+            "title": "Submissions"
+          },
+          "rating_trends": {
+            "items": {
+              "$ref": "#/components/schemas/RatingTrendOut"
+            },
+            "type": "array",
+            "title": "Rating Trends"
+          }
+        },
+        "type": "object",
+        "required": [
+          "submissions",
+          "rating_trends"
+        ],
+        "title": "PlayerHistoryOut"
+      },
       "PlayerInviteCreate": {
         "properties": {
           "name": {
@@ -2313,6 +2441,32 @@
         },
         "type": "object",
         "title": "QuestionnaireUpdate"
+      },
+      "RatingTrendOut": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "values": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "prompt",
+          "values"
+        ],
+        "title": "RatingTrendOut"
       },
       "RefreshRequest": {
         "properties": {

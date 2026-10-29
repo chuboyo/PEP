@@ -25,12 +25,44 @@ export type OccurrenceResponseOut = {
   submitted_at: string;
 };
 
+export type PlayerHistoryItem = {
+  occurrence_id: string;
+  assignment_id: string;
+  questionnaire_id: string;
+  questionnaire_name: string;
+  status: string;
+  channel: string | null;
+  submitted_at: string;
+  due_at: string | null;
+  answers: Record<string, unknown>;
+  questions_snapshot: Question[];
+};
+
+export type RatingTrend = {
+  question_id: string;
+  prompt: string;
+  values: number[];
+};
+
+export type PlayerHistory = {
+  submissions: PlayerHistoryItem[];
+  rating_trends: RatingTrend[];
+};
+
 export async function listMyOccurrences(): Promise<PlayerOccurrenceOut[]> {
   const response = await apiFetch("/api/v1/player/occurrences");
   if (!response.ok) {
     throw new ApiError(response.status, await readError(response));
   }
   return (await response.json()) as PlayerOccurrenceOut[];
+}
+
+export async function getPlayerHistory(): Promise<PlayerHistory> {
+  const response = await apiFetch("/api/v1/player/history");
+  if (!response.ok) {
+    throw new ApiError(response.status, await readError(response));
+  }
+  return (await response.json()) as PlayerHistory;
 }
 
 export async function submitOccurrenceResponse(

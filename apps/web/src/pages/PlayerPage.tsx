@@ -4,8 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import type { PlayerOccurrenceOut } from "../api/player";
 import type { Question } from "../api/questionnaires";
 import { getAccessToken } from "../auth";
+import {
+  PlayerRatingTrendCharts,
+  PlayerSubmissionList,
+} from "../components/PlayerHistoryCharts";
 import { useMeQuery } from "../queries/auth";
 import {
+  usePlayerHistoryQuery,
   usePlayerOccurrencesQuery,
   useSubmitOccurrenceResponseMutation,
 } from "../queries/player";
@@ -119,6 +124,7 @@ export function PlayerPage() {
     (m) => m.role === "PLAYER" && m.status === "active",
   );
   const occurrencesQuery = usePlayerOccurrencesQuery(!!isPlayer);
+  const historyQuery = usePlayerHistoryQuery(!!isPlayer);
   const submitMutation = useSubmitOccurrenceResponseMutation();
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -136,8 +142,6 @@ export function PlayerPage() {
 
   const pending =
     occurrencesQuery.data?.filter((o) => o.status === "pending") ?? [];
-  const completed =
-    occurrencesQuery.data?.filter((o) => o.status === "completed") ?? [];
   const active: PlayerOccurrenceOut | undefined = pending.find(
     (o) => o.id === activeId,
   );
@@ -191,6 +195,9 @@ export function PlayerPage() {
         <header className="topbar">
           <h1 className="brand">My questionnaires</h1>
           <div className="nav-links">
+            <Link className="btn btn--ghost" to="/player/history">
+              History
+            </Link>
             <Link className="btn btn--ghost" to="/">
               Home
             </Link>
@@ -269,18 +276,28 @@ export function PlayerPage() {
               </ul>
             )}
 
-            <h2 className="section-title">Completed</h2>
-            {completed.length === 0 ? (
-              <p className="muted">None yet.</p>
+            {historyQuery.isPending ? (
+              <p className="muted">Loading history…</p>
+            ) : historyQuery.isError ? (
+              <p className="alert" role="alert">
+                Could not load history
+              </p>
             ) : (
-              <ul className="meta-list">
-                {completed.map((occurrence) => (
-                  <li key={occurrence.id}>
-                    <span className="value">{occurrence.questionnaire_name}</span>
-                    <span className="muted">Completed</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <PlayerRatingTrendCharts
+                  trends={historyQuery.data?.rating_trends ?? []}
+                />
+                <h2 className="section-title">Past submissions</h2>
+                <PlayerSubmissionList
+                  submissions={historyQuery.data?.submissions ?? []}
+                  limit={3}
+                />
+                {(historyQuery.data?.submissions.length ?? 0) > 3 ? (
+                  <p className="muted">
+                    <Link to="/player/history">View full history</Link>
+                  </p>
+                ) : null}
+              </>
             )}
           </>
         )}
