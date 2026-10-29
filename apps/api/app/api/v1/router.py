@@ -6,6 +6,7 @@ from app.api.v1 import (
     health,
     organizations,
     player,
+    players,
     questionnaires,
     teams,
 )
@@ -18,3 +19,4 @@ api_router.include_router(teams.router)
 api_router.include_router(questionnaires.router)
 api_router.include_router(assignments.router)
 api_router.include_router(player.router)
+api_router.include_router(players.router)

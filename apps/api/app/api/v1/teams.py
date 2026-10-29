@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import (
@@ -12,6 +12,7 @@ from app.core.dependencies import (
 )
 from app.core.principal import Principal
 from app.db.session import get_db
+from app.schemas.dashboard import TeamDashboardOut
 from app.schemas.teams import (
     PlayerInviteCreate,
     PlayerInviteCreated,
@@ -20,6 +21,7 @@ from app.schemas.teams import (
     TeamMemberOut,
     TeamOut,
 )
+from app.services import dashboard as dashboard_service
 from app.services import invitations as invitations_service
 from app.services import teams as teams_service
 
@@ -59,6 +61,21 @@ def get_team(
         organization_id=team.organization_id,
         name=team.name,
         members=[TeamMemberOut(**m) for m in roster],
+    )
+
+
+@router.get("/teams/{team_id}/dashboard", response_model=TeamDashboardOut)
+def get_team_dashboard(
+    team_id: uuid.UUID,
+    principal: Principal = Depends(require_coach_on_team),
+    db: Session = Depends(get_db),
+    questionnaire_id: uuid.UUID | None = Query(default=None),
+) -> TeamDashboardOut:
+    return dashboard_service.get_team_dashboard(
+        db,
+        principal=principal,
+        team_id=team_id,
+        questionnaire_id=questionnaire_id,
     )
 
 
