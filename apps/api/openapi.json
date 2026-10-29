@@ -511,6 +511,71 @@
         }
       }
     },
+    "/api/v1/teams/{team_id}/dashboard": {
+      "get": {
+        "tags": [
+          "teams"
+        ],
+        "summary": "Get Team Dashboard",
+        "operationId": "get_team_dashboard_api_v1_teams__team_id__dashboard_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Team Id"
+            }
+          },
+          {
+            "name": "questionnaire_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Questionnaire Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDashboardOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/teams/{team_id}/players": {
       "post": {
         "tags": [
@@ -864,6 +929,54 @@
           }
         }
       }
+    },
+    "/api/v1/players/{player_id}": {
+      "get": {
+        "tags": [
+          "players"
+        ],
+        "summary": "Get Player",
+        "operationId": "get_player_api_v1_players__player_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1067,6 +1180,48 @@
         ],
         "title": "AssignmentTargetType"
       },
+      "AttentionFlagOut": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/AttentionFlagType"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "player_name": {
+            "type": "string",
+            "title": "Player Name"
+          },
+          "question_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "player_id",
+          "player_name"
+        ],
+        "title": "AttentionFlagOut"
+      },
+      "AttentionFlagType": {
+        "type": "string",
+        "enum": [
+          "high_rating_streak",
+          "missed_streak"
+        ],
+        "title": "AttentionFlagType"
+      },
       "CoachInviteCreate": {
         "properties": {
           "name": {
@@ -1110,6 +1265,62 @@
           "invite_link"
         ],
         "title": "CoachInviteCreated"
+      },
+      "DashboardPlayerRowOut": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OccurrenceStatus"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answers": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "status"
+        ],
+        "title": "DashboardPlayerRowOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1542,6 +1753,38 @@
         ],
         "title": "OrganizationOut"
       },
+      "PlayerDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "occurrences": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerOccurrenceHistoryOut"
+            },
+            "type": "array",
+            "title": "Occurrences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "occurrences"
+        ],
+        "title": "PlayerDetailOut"
+      },
       "PlayerInviteCreate": {
         "properties": {
           "name": {
@@ -1602,6 +1845,98 @@
           "invite_link"
         ],
         "title": "PlayerInviteCreated"
+      },
+      "PlayerOccurrenceHistoryOut": {
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Occurrence Id"
+          },
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "questionnaire_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionnaire Id"
+          },
+          "questionnaire_name": {
+            "type": "string",
+            "title": "Questionnaire Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OccurrenceStatus"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answers": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answers"
+          },
+          "questions_snapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions Snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurrence_id",
+          "assignment_id",
+          "questionnaire_id",
+          "questionnaire_name",
+          "status",
+          "due_at",
+          "submitted_at",
+          "channel",
+          "answers",
+          "questions_snapshot"
+        ],
+        "title": "PlayerOccurrenceHistoryOut"
       },
       "PlayerOccurrenceOut": {
         "properties": {
@@ -1676,6 +2011,65 @@
           "created_at"
         ],
         "title": "PlayerOccurrenceOut"
+      },
+      "QuestionStatOut": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "question_type": {
+            "type": "string",
+            "title": "Question Type"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average"
+          },
+          "yes_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yes Count"
+          },
+          "option_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "question_type",
+          "prompt"
+        ],
+        "title": "QuestionStatOut"
       },
       "QuestionnaireCreate": {
         "properties": {
@@ -1947,6 +2341,100 @@
           "name"
         ],
         "title": "TeamCreate"
+      },
+      "TeamDashboardOut": {
+        "properties": {
+          "team_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Team Id"
+          },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
+          "questionnaire_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questionnaire Id"
+          },
+          "questionnaire_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questionnaire Name"
+          },
+          "questions_snapshot": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions Snapshot"
+          },
+          "completion_count": {
+            "type": "integer",
+            "title": "Completion Count"
+          },
+          "roster_size": {
+            "type": "integer",
+            "title": "Roster Size"
+          },
+          "question_stats": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionStatOut"
+            },
+            "type": "array",
+            "title": "Question Stats"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardPlayerRowOut"
+            },
+            "type": "array",
+            "title": "Players"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionFlagOut"
+            },
+            "type": "array",
+            "title": "Flags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "team_id",
+          "assignment_id",
+          "questionnaire_id",
+          "questionnaire_name",
+          "questions_snapshot",
+          "completion_count",
+          "roster_size",
+          "question_stats",
+          "players",
+          "flags"
+        ],
+        "title": "TeamDashboardOut"
       },
       "TeamDetailOut": {
         "properties": {

@@ -22,6 +22,7 @@ from app.models import (
     Response,
     Team,
     TeamMember,
+    User,
 )
 
 
@@ -220,3 +221,109 @@ def count_occurrences_for_assignment(db: Session, assignment_id: uuid.UUID) -> i
         )
         or 0
     )
+
+
+def get_latest_team_assignment(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    questionnaire_id: uuid.UUID | None = None,
+) -> Assignment | None:
+    stmt = select(Assignment).where(Assignment.team_id == team_id)
+    if questionnaire_id is not None:
+        stmt = stmt.where(Assignment.questionnaire_id == questionnaire_id)
+    return db.scalar(stmt.order_by(Assignment.created_at.desc()).limit(1))
+
+
+def get_questionnaire_name(db: Session, questionnaire_id: uuid.UUID) -> str | None:
+    return db.scalar(
+        select(Questionnaire.name).where(Questionnaire.id == questionnaire_id)
+    )
+
+
+def list_assignment_player_rows(
+    db: Session, *, assignment_id: uuid.UUID
+) -> list[tuple[PlayerOccurrence, User, Response | None]]:
+    rows = db.execute(
+        select(PlayerOccurrence, User, Response)
+        .join(User, User.id == PlayerOccurrence.player_id)
+        .outerjoin(Response, Response.occurrence_id == PlayerOccurrence.id)
+        .where(PlayerOccurrence.assignment_id == assignment_id)
+        .order_by(User.name.asc())
+    ).all()
+    return [(occurrence, user, response) for occurrence, user, response in rows]
+
+
+def list_roster_player_names(
+    db: Session, *, team_id: uuid.UUID, organization_id: uuid.UUID
+) -> dict[uuid.UUID, str]:
+    rows = db.execute(
+        select(User.id, User.name)
+        .join(TeamMember, TeamMember.user_id == User.id)
+        .join(
+            Membership,
+            (Membership.user_id == User.id)
+            & (Membership.organization_id == organization_id),
+        )
+        .where(
+            TeamMember.team_id == team_id,
+            Membership.role == MembershipRole.PLAYER,
+            Membership.status.in_(
+                [MembershipStatus.INVITED, MembershipStatus.ACTIVE]
+            ),
+        )
+    ).all()
+    return {user_id: name for user_id, name in rows}
+
+
+def list_questionnaire_history_for_players(
+    db: Session,
+    *,
+    questionnaire_id: uuid.UUID,
+    player_ids: list[uuid.UUID],
+) -> list[tuple[PlayerOccurrence, Response | None]]:
+    if not player_ids:
+        return []
+    rows = db.execute(
+        select(PlayerOccurrence, Response)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .outerjoin(Response, Response.occurrence_id == PlayerOccurrence.id)
+        .where(
+            Assignment.questionnaire_id == questionnaire_id,
+            PlayerOccurrence.player_id.in_(player_ids),
+        )
+        .order_by(
+            PlayerOccurrence.player_id.asc(),
+            PlayerOccurrence.due_at.desc().nullslast(),
+            PlayerOccurrence.created_at.desc(),
+        )
+    ).all()
+    return [(occurrence, response) for occurrence, response in rows]
+
+
+def list_player_occurrence_history(
+    db: Session,
+    *,
+    player_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> list[tuple[PlayerOccurrence, Assignment, str | None, Response | None]]:
+    rows = db.execute(
+        select(PlayerOccurrence, Assignment, Questionnaire.name, Response)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .outerjoin(
+            Questionnaire, Questionnaire.id == Assignment.questionnaire_id
+        )
+        .outerjoin(Response, Response.occurrence_id == PlayerOccurrence.id)
+        .where(
+            PlayerOccurrence.player_id == player_id,
+            PlayerOccurrence.organization_id == organization_id,
+        )
+        .order_by(
+            Response.submitted_at.desc().nullslast(),
+            PlayerOccurrence.created_at.desc(),
+        )
+    ).all()
+    return [
+        (occurrence, assignment, name, response)
+        for occurrence, assignment, name, response in rows
+    ]

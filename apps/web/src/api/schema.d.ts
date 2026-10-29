@@ -193,6 +193,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/{team_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Team Dashboard */
+        get: operations["get_team_dashboard_api_v1_teams__team_id__dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams/{team_id}/players": {
         parameters: {
             query?: never;
@@ -313,6 +330,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/{player_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Player */
+        get: operations["get_player_api_v1_players__player_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -397,6 +431,24 @@ export interface components {
          * @enum {string}
          */
         AssignmentTargetType: "team" | "players";
+        /** AttentionFlagOut */
+        AttentionFlagOut: {
+            type: components["schemas"]["AttentionFlagType"];
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /** Player Name */
+            player_name: string;
+            /** Question Id */
+            question_id?: string | null;
+        };
+        /**
+         * AttentionFlagType
+         * @enum {string}
+         */
+        AttentionFlagType: "high_rating_streak" | "missed_streak";
         /** CoachInviteCreate */
         CoachInviteCreate: {
             /** Name */
@@ -418,6 +470,22 @@ export interface components {
             email: string;
             /** Invite Link */
             invite_link: string;
+        };
+        /** DashboardPlayerRowOut */
+        DashboardPlayerRowOut: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["OccurrenceStatus"];
+            /** Submitted At */
+            submitted_at?: string | null;
+            channel?: components["schemas"]["AssignmentChannel"] | null;
+            /** Answers */
+            answers?: Record<string, never> | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -587,6 +655,20 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** PlayerDetailOut */
+        PlayerDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Occurrences */
+            occurrences: components["schemas"]["PlayerOccurrenceHistoryOut"][];
+        };
         /** PlayerInviteCreate */
         PlayerInviteCreate: {
             /** Name */
@@ -615,6 +697,36 @@ export interface components {
             email: string;
             /** Invite Link */
             invite_link: string;
+        };
+        /** PlayerOccurrenceHistoryOut */
+        PlayerOccurrenceHistoryOut: {
+            /**
+             * Occurrence Id
+             * Format: uuid
+             */
+            occurrence_id: string;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Questionnaire Id
+             * Format: uuid
+             */
+            questionnaire_id: string;
+            /** Questionnaire Name */
+            questionnaire_name: string;
+            status: components["schemas"]["OccurrenceStatus"];
+            /** Due At */
+            due_at: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+            channel: components["schemas"]["AssignmentChannel"] | null;
+            /** Answers */
+            answers: Record<string, never> | null;
+            /** Questions Snapshot */
+            questions_snapshot: Record<string, never>[];
         };
         /** PlayerOccurrenceOut */
         PlayerOccurrenceOut: {
@@ -655,6 +767,23 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** QuestionStatOut */
+        QuestionStatOut: {
+            /** Question Id */
+            question_id: string;
+            /** Question Type */
+            question_type: string;
+            /** Prompt */
+            prompt: string;
+            /** Average */
+            average?: number | null;
+            /** Yes Count */
+            yes_count?: number | null;
+            /** Option Counts */
+            option_counts?: {
+                [key: string]: number;
+            } | null;
         };
         /** QuestionnaireCreate */
         QuestionnaireCreate: {
@@ -742,6 +871,32 @@ export interface components {
         TeamCreate: {
             /** Name */
             name: string;
+        };
+        /** TeamDashboardOut */
+        TeamDashboardOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Assignment Id */
+            assignment_id: string | null;
+            /** Questionnaire Id */
+            questionnaire_id: string | null;
+            /** Questionnaire Name */
+            questionnaire_name: string | null;
+            /** Questions Snapshot */
+            questions_snapshot: Record<string, never>[];
+            /** Completion Count */
+            completion_count: number;
+            /** Roster Size */
+            roster_size: number;
+            /** Question Stats */
+            question_stats: components["schemas"]["QuestionStatOut"][];
+            /** Players */
+            players: components["schemas"]["DashboardPlayerRowOut"][];
+            /** Flags */
+            flags: components["schemas"]["AttentionFlagOut"][];
         };
         /** TeamDetailOut */
         TeamDetailOut: {
@@ -1194,6 +1349,39 @@ export interface operations {
             };
         };
     };
+    get_team_dashboard_api_v1_teams__team_id__dashboard_get: {
+        parameters: {
+            query?: {
+                questionnaire_id?: string | null;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamDashboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     invite_player_api_v1_teams__team_id__players_post: {
         parameters: {
             query?: never;
@@ -1412,6 +1600,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OccurrenceResponseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_player_api_v1_players__player_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerDetailOut"];
                 };
             };
             /** @description Validation Error */

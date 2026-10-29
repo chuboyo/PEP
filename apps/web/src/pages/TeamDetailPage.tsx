@@ -45,6 +45,12 @@ export function TeamDetailPage() {
             >
               Register player
             </Link>
+            <Link
+              className="btn btn--ghost"
+              to={`/dashboard?team_id=${teamId}`}
+            >
+              Dashboard
+            </Link>
             <Link className="btn btn--ghost" to="/teams">
               All teams
             </Link>
@@ -68,7 +74,16 @@ export function TeamDetailPage() {
             {teamQuery.data?.members.map((member) => (
               <li key={member.user_id}>
                 <span className="label">{member.role ?? "member"}</span>
-                <span className="value">{member.name}</span>
+                {member.role === "PLAYER" ? (
+                  <Link
+                    className="value"
+                    to={`/players/${member.user_id}`}
+                  >
+                    {member.name}
+                  </Link>
+                ) : (
+                  <span className="value">{member.name}</span>
+                )}
                 <span className="muted">{member.email}</span>
               </li>
             ))}

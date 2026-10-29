@@ -104,7 +104,10 @@ export function HomePage() {
               ) : null}
               {isCoach ? (
                 <>
-                  <Link className="btn btn--primary" to="/teams">
+                  <Link className="btn btn--primary" to="/dashboard">
+                    Dashboard
+                  </Link>
+                  <Link className="btn btn--ghost" to="/teams">
                     Teams
                   </Link>
                   <Link className="btn btn--ghost" to="/questionnaires">
