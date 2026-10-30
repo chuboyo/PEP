@@ -8,6 +8,13 @@ import { useTeamsQuery } from "../queries/teams";
 
 type ExerciseDraft = { name: string; duration_minutes: string };
 
+function localDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function CreateRoutinePage() {
   const navigate = useNavigate();
   const hasToken = !!getAccessToken();
@@ -25,9 +32,7 @@ export function CreateRoutinePage() {
   const [intensity, setIntensity] = useState("");
   const [frequency, setFrequency] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [startDate, setStartDate] = useState(localDateInputValue);
   const [endDate, setEndDate] = useState("");
   const [teamId, setTeamId] = useState("");
   const [exercises, setExercises] = useState<ExerciseDraft[]>([

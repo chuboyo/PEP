@@ -137,7 +137,6 @@ def list_routines_for_principal(
                 ),
             )
             for routine in routines
-            if routine.team_id is None or principal.is_on_team(routine.team_id)
         ]
 
     if any(

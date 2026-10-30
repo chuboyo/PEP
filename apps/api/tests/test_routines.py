@@ -156,6 +156,68 @@ def test_player_cannot_update_another_players_assignment(
     assert denied.status_code == 404
 
 
+def test_player_targeted_routine_not_listed_to_unrelated_coach(
+    client: TestClient,
+    superadmin: User,
+) -> None:
+    coach_a, org_id = bootstrap_coach(
+        client,
+        club_name="LeakRoutine FC",
+        admin_email="leakroutine-admin@example.com",
+        coach_email="leakroutine-coach-a@example.com",
+    )
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "leakroutine-admin@example.com",
+            "password": "clubadmin1",
+        },
+    )
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    coach_b_invite = client.post(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Other Coach", "email": "leakroutine-coach-b@example.com"},
+    ).json()
+    coach_b = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(coach_b_invite["invite_link"]),
+            "password": "coachpass2",
+        },
+    )
+    coach_b_headers = {
+        "Authorization": f"Bearer {coach_b.json()['access_token']}"
+    }
+
+    player_headers, _, _ = bootstrap_player_on_team(
+        client,
+        coach_a,
+        team_name="Coach A Only",
+        player_email="leakroutine-player@example.com",
+    )
+    player_id = client.get("/api/v1/me", headers=player_headers).json()["id"]
+
+    body = _routine_body("00000000-0000-0000-0000-000000000000")
+    del body["team_id"]
+    body["player_ids"] = [player_id]
+    body["name"] = "Secret recovery"
+
+    created = client.post("/api/v1/routines", headers=coach_a, json=body)
+    assert created.status_code == 200
+    routine_id = created.json()["id"]
+
+    listed_a = client.get("/api/v1/routines", headers=coach_a)
+    assert listed_a.status_code == 200
+    assert any(r["id"] == routine_id for r in listed_a.json())
+
+    listed_b = client.get("/api/v1/routines", headers=coach_b_headers)
+    assert listed_b.status_code == 200
+    assert all(r["id"] != routine_id for r in listed_b.json())
+
+
 def test_dashboard_routine_counts_after_transitions(
     client: TestClient,
     superadmin: User,

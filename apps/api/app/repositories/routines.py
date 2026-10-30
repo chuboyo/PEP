@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     RoutineAssignment,
     RoutineAssignmentStatus,
+    TeamMember,
     TrainingRoutine,
 )
 
@@ -86,25 +87,38 @@ def list_routines_for_coach(
     organization_id: uuid.UUID,
     team_ids: list[uuid.UUID],
 ) -> list[TrainingRoutine]:
+    """Routines the coach may see: their team routines, or player-targeted
+    routines where they share an org team with at least one assignee.
+    """
     if not team_ids:
-        return list(
-            db.scalars(
-                select(TrainingRoutine)
-                .where(
-                    TrainingRoutine.organization_id == organization_id,
-                    TrainingRoutine.team_id.is_(None),
-                )
-                .order_by(TrainingRoutine.created_at.desc())
-            ).all()
+        return []
+
+    # Player-targeted (team_id null): assignee shares one of the coach's teams.
+    shared_player_routine_ids = (
+        select(TrainingRoutine.id)
+        .join(
+            RoutineAssignment,
+            RoutineAssignment.routine_id == TrainingRoutine.id,
         )
+        .join(
+            TeamMember,
+            TeamMember.user_id == RoutineAssignment.player_id,
+        )
+        .where(
+            TrainingRoutine.organization_id == organization_id,
+            TrainingRoutine.team_id.is_(None),
+            TeamMember.team_id.in_(team_ids),
+        )
+    )
+
     return list(
         db.scalars(
             select(TrainingRoutine)
             .where(
                 TrainingRoutine.organization_id == organization_id,
                 (
-                    TrainingRoutine.team_id.is_(None)
-                    | TrainingRoutine.team_id.in_(team_ids)
+                    TrainingRoutine.team_id.in_(team_ids)
+                    | TrainingRoutine.id.in_(shared_player_routine_ids)
                 ),
             )
             .order_by(TrainingRoutine.created_at.desc())
