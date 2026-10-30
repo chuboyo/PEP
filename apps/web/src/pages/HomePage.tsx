@@ -116,6 +116,9 @@ export function HomePage() {
                   <Link className="btn btn--ghost" to="/assignments/new">
                     Assign
                   </Link>
+                  <Link className="btn btn--ghost" to="/routines">
+                    Routines
+                  </Link>
                 </>
               ) : null}
               {isPlayer ? (
@@ -125,6 +128,9 @@ export function HomePage() {
                   </Link>
                   <Link className="btn btn--ghost" to="/player/history">
                     History
+                  </Link>
+                  <Link className="btn btn--ghost" to="/routines">
+                    Routines
                   </Link>
                 </>
               ) : null}

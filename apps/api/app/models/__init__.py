@@ -13,9 +13,11 @@ from app.models.enums import (
     OccurrenceStatus,
     OrganizationStatus,
     PlatformRole,
+    RoutineAssignmentStatus,
     UserStatus,
 )
 from app.models.questionnaire import Questionnaire, QuestionnaireTemplate
+from app.models.routine import RoutineAssignment, TrainingRoutine
 from app.models.team import Team, TeamMember
 from app.models.user import Invitation, Membership, Organization, RefreshToken, User
 
@@ -33,6 +35,8 @@ __all__ = [
     "AssignmentTarget",
     "PlayerOccurrence",
     "Response",
+    "TrainingRoutine",
+    "RoutineAssignment",
     "UserStatus",
     "PlatformRole",
     "OrganizationStatus",
@@ -42,4 +46,5 @@ __all__ = [
     "AssignmentSchedule",
     "AssignmentChannel",
     "OccurrenceStatus",
+    "RoutineAssignmentStatus",
 ]

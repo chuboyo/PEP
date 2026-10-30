@@ -51,3 +51,9 @@ class OccurrenceStatus(str, enum.Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     MISSED = "missed"
+
+
+class RoutineAssignmentStatus(str, enum.Enum):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"

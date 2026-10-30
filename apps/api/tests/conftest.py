@@ -55,8 +55,9 @@ def db() -> Generator[Session, None, None]:
     with test_engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE responses, player_occurrences, assignment_targets, "
-                "assignments, questionnaires, team_members, teams, invitations, "
+                "TRUNCATE routine_assignments, training_routines, responses, "
+                "player_occurrences, assignment_targets, assignments, "
+                "questionnaires, team_members, teams, invitations, "
                 "refresh_tokens, memberships, organizations, users "
                 "RESTART IDENTITY CASCADE"
             )

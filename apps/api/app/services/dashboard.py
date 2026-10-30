@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.principal import Principal
 from app.models import OccurrenceStatus
 from app.repositories import assignments as assignments_repo
+from app.repositories import routines as routines_repo
 from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 from app.schemas.dashboard import (
@@ -20,6 +21,7 @@ from app.schemas.dashboard import (
     PlayerDetailOut,
     PlayerOccurrenceHistoryOut,
     QuestionStatOut,
+    RoutineCountsOut,
     TeamDashboardOut,
 )
 
@@ -42,6 +44,13 @@ def get_team_dashboard(
         db, team_id=team_id, organization_id=org_id
     )
     roster_size = len(roster_names)
+    routine_counts = RoutineCountsOut(
+        **routines_repo.count_statuses_for_team_roster(
+            db,
+            organization_id=org_id,
+            player_ids=list(roster_names.keys()),
+        )
+    )
 
     assignment = assignments_repo.get_latest_team_assignment(
         db, team_id=team_id, questionnaire_id=questionnaire_id
@@ -58,6 +67,7 @@ def get_team_dashboard(
             question_stats=[],
             players=[],
             flags=[],
+            routine_counts=routine_counts,
         )
 
     questionnaire_name = assignments_repo.get_questionnaire_name(
@@ -107,6 +117,7 @@ def get_team_dashboard(
         question_stats=question_stats,
         players=players,
         flags=flags,
+        routine_counts=routine_counts,
     )
 
 
