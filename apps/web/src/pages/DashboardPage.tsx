@@ -130,6 +130,26 @@ export function DashboardPage() {
                     rosterSize={dashboard.roster_size}
                   />
                 </div>
+                <ul className="meta-list">
+                  <li>
+                    <span className="label">Routines assigned</span>
+                    <span className="value">
+                      {dashboard.routine_counts.assigned}
+                    </span>
+                  </li>
+                  <li>
+                    <span className="label">Routines in progress</span>
+                    <span className="value">
+                      {dashboard.routine_counts.in_progress}
+                    </span>
+                  </li>
+                  <li>
+                    <span className="label">Routines completed</span>
+                    <span className="value">
+                      {dashboard.routine_counts.completed}
+                    </span>
+                  </li>
+                </ul>
 
                 {dashboard.question_stats.length > 0 ? (
                   <>

@@ -40,6 +40,12 @@ class AttentionFlagOut(BaseModel):
     question_id: str | None = None
 
 
+class RoutineCountsOut(BaseModel):
+    assigned: int
+    in_progress: int
+    completed: int
+
+
 class TeamDashboardOut(BaseModel):
     team_id: uuid.UUID
     assignment_id: uuid.UUID | None
@@ -51,6 +57,7 @@ class TeamDashboardOut(BaseModel):
     question_stats: list[QuestionStatOut]
     players: list[DashboardPlayerRowOut]
     flags: list[AttentionFlagOut]
+    routine_counts: RoutineCountsOut
 
 
 class PlayerOccurrenceHistoryOut(BaseModel):

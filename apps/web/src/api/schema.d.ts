@@ -296,6 +296,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Routines */
+        get: operations["list_routines_api_v1_routines_get"];
+        put?: never;
+        /** Create Routine */
+        post: operations["create_routine_api_v1_routines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/player/routines/{assignment_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Routine Status */
+        post: operations["update_routine_status_api_v1_player_routines__assignment_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/player/occurrences": {
         parameters: {
             query?: never;
@@ -503,6 +538,13 @@ export interface components {
             channel?: components["schemas"]["AssignmentChannel"] | null;
             /** Answers */
             answers?: Record<string, never> | null;
+        };
+        /** ExerciseItem */
+        ExerciseItem: {
+            /** Name */
+            name: string;
+            /** Duration Minutes */
+            duration_minutes: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -933,6 +975,156 @@ export interface components {
             /** Refresh Token */
             refresh_token: string;
         };
+        /** RoutineAssignmentOut */
+        RoutineAssignmentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Routine Id
+             * Format: uuid
+             */
+            routine_id: string;
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            status: components["schemas"]["RoutineAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Routine Name */
+            routine_name: string;
+            /** Description */
+            description: string;
+            /** Objective */
+            objective: string;
+            /** Exercises */
+            exercises: Record<string, never>[];
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Intensity */
+            intensity: string | null;
+            /** Frequency */
+            frequency: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date: string | null;
+            /** Instructions */
+            instructions: string | null;
+        };
+        /**
+         * RoutineAssignmentStatus
+         * @enum {string}
+         */
+        RoutineAssignmentStatus: "not_started" | "in_progress" | "completed";
+        /** RoutineCountsOut */
+        RoutineCountsOut: {
+            /** Assigned */
+            assigned: number;
+            /** In Progress */
+            in_progress: number;
+            /** Completed */
+            completed: number;
+        };
+        /** RoutineCreate */
+        RoutineCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Objective */
+            objective: string;
+            /** Exercises */
+            exercises: components["schemas"]["ExerciseItem"][];
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Intensity */
+            intensity?: string | null;
+            /** Frequency */
+            frequency?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date?: string | null;
+            /** Instructions */
+            instructions?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Player Ids */
+            player_ids?: string[] | null;
+        };
+        /** RoutineOut */
+        RoutineOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Team Id */
+            team_id: string | null;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Objective */
+            objective: string;
+            /** Exercises */
+            exercises: Record<string, never>[];
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Intensity */
+            intensity: string | null;
+            /** Frequency */
+            frequency: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date: string | null;
+            /** Instructions */
+            instructions: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Assignment Count */
+            assignment_count: number;
+        };
+        /** RoutineStatusUpdate */
+        RoutineStatusUpdate: {
+            status: components["schemas"]["RoutineAssignmentStatus"];
+        };
         /** TeamCreate */
         TeamCreate: {
             /** Name */
@@ -963,6 +1155,7 @@ export interface components {
             players: components["schemas"]["DashboardPlayerRowOut"][];
             /** Flags */
             flags: components["schemas"]["AttentionFlagOut"][];
+            routine_counts: components["schemas"]["RoutineCountsOut"];
         };
         /** TeamDetailOut */
         TeamDetailOut: {
@@ -1611,6 +1804,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_routines_api_v1_routines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    create_routine_api_v1_routines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_routine_status_api_v1_player_routines__assignment_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineAssignmentOut"];
                 };
             };
             /** @description Validation Error */

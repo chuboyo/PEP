@@ -27,6 +27,12 @@ export type AttentionFlag = {
   question_id: string | null;
 };
 
+export type RoutineCounts = {
+  assigned: number;
+  in_progress: number;
+  completed: number;
+};
+
 export type TeamDashboard = {
   team_id: string;
   assignment_id: string | null;
@@ -38,6 +44,7 @@ export type TeamDashboard = {
   question_stats: QuestionStat[];
   players: DashboardPlayerRow[];
   flags: AttentionFlag[];
+  routine_counts: RoutineCounts;
 };
 
 export type PlayerOccurrenceHistory = {

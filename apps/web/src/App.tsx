@@ -6,6 +6,7 @@ import { AdminClubsPage } from "./pages/AdminClubsPage";
 import { ClubCoachesPage } from "./pages/ClubCoachesPage";
 import { CreateAssignmentPage } from "./pages/CreateAssignmentPage";
 import { CreateQuestionnairePage } from "./pages/CreateQuestionnairePage";
+import { CreateRoutinePage } from "./pages/CreateRoutinePage";
 import { CreateTeamPage } from "./pages/CreateTeamPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EditQuestionnairePage } from "./pages/EditQuestionnairePage";
@@ -16,6 +17,7 @@ import { PlayerDetailPage } from "./pages/PlayerDetailPage";
 import { PlayerHistoryPage } from "./pages/PlayerHistoryPage";
 import { PlayerPage } from "./pages/PlayerPage";
 import { QuestionnairesPage } from "./pages/QuestionnairesPage";
+import { RoutinesPage } from "./pages/RoutinesPage";
 import { TeamDetailPage } from "./pages/TeamDetailPage";
 import { TeamsPage } from "./pages/TeamsPage";
 
@@ -41,6 +43,8 @@ export function App() {
         element={<EditQuestionnairePage />}
       />
       <Route path="/assignments/new" element={<CreateAssignmentPage />} />
+      <Route path="/routines" element={<RoutinesPage />} />
+      <Route path="/routines/new" element={<CreateRoutinePage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/players/:playerId" element={<PlayerDetailPage />} />
       <Route path="/player/history" element={<PlayerHistoryPage />} />
