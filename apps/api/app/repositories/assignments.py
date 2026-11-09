@@ -186,29 +186,39 @@ def list_occurrence_details_for_player(
 
 
 def get_latest_open_occurrence_for_player(
-    db: Session, player_id: uuid.UUID
+    db: Session,
+    player_id: uuid.UUID,
+    *,
+    channel: AssignmentChannel | None = None,
 ) -> PlayerOccurrence | None:
+    stmt = select(PlayerOccurrence).where(
+        PlayerOccurrence.player_id == player_id,
+        PlayerOccurrence.status.in_(
+            [OccurrenceStatus.PENDING, OccurrenceStatus.IN_PROGRESS]
+        ),
+    )
+    if channel is not None:
+        stmt = stmt.join(
+            Assignment, Assignment.id == PlayerOccurrence.assignment_id
+        ).where(Assignment.channel == channel)
     return db.scalar(
-        select(PlayerOccurrence)
-        .where(
-            PlayerOccurrence.player_id == player_id,
-            PlayerOccurrence.status.in_(
-                [OccurrenceStatus.PENDING, OccurrenceStatus.IN_PROGRESS]
-            ),
-        )
-        .order_by(PlayerOccurrence.created_at.desc())
-        .limit(1)
+        stmt.order_by(PlayerOccurrence.created_at.desc()).limit(1)
     )
 
 
 def get_latest_occurrence_for_player(
-    db: Session, player_id: uuid.UUID
+    db: Session,
+    player_id: uuid.UUID,
+    *,
+    channel: AssignmentChannel | None = None,
 ) -> PlayerOccurrence | None:
+    stmt = select(PlayerOccurrence).where(PlayerOccurrence.player_id == player_id)
+    if channel is not None:
+        stmt = stmt.join(
+            Assignment, Assignment.id == PlayerOccurrence.assignment_id
+        ).where(Assignment.channel == channel)
     return db.scalar(
-        select(PlayerOccurrence)
-        .where(PlayerOccurrence.player_id == player_id)
-        .order_by(PlayerOccurrence.created_at.desc())
-        .limit(1)
+        stmt.order_by(PlayerOccurrence.created_at.desc()).limit(1)
     )
 
 

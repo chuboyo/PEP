@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models import (
     AssignmentChannel,
+    Delivery,
     DeliveryKind,
     DeliveryStatus,
     OccurrenceStatus,
@@ -68,24 +69,38 @@ def parse_reply_id(raw: str) -> tuple[uuid.UUID, str, str] | None:
         return None
 
 
-def send_start_template(
-    db: Session,
-    *,
-    occurrence: PlayerOccurrence,
-    player_name: str,
-    questionnaire_name: str,
-    to_e164: str,
-    channel: WhatsAppPort | None = None,
-) -> None:
-    port = channel or get_whatsapp_port()
-    settings = get_settings()
-    delivery = deliveries_repo.create_delivery(
+def queue_start_delivery(
+    db: Session, *, occurrence: PlayerOccurrence
+) -> Delivery:
+    """Persist a queued survey_start delivery. Call Meta only after commit."""
+    return deliveries_repo.create_delivery(
         db,
         occurrence_id=occurrence.id,
         channel=AssignmentChannel.WHATSAPP.value,
         kind=DeliveryKind.SURVEY_START,
         status=DeliveryStatus.QUEUED,
     )
+
+
+def dispatch_queued_start(
+    db: Session,
+    *,
+    delivery_id: uuid.UUID,
+    player_name: str,
+    questionnaire_name: str,
+    to_e164: str,
+    channel: WhatsAppPort | None = None,
+) -> None:
+    """Send a previously committed queued start template. Never raises to caller.
+
+    Assignment rows must already be committed so a Meta failure cannot roll them
+    back, and status webhooks can resolve provider_message_id.
+    """
+    port = channel or get_whatsapp_port()
+    settings = get_settings()
+    delivery = deliveries_repo.get_by_id(db, delivery_id)
+    if delivery is None or delivery.status != DeliveryStatus.QUEUED:
+        return
     try:
         message_id = port.send_template(
             to_e164=to_e164,
@@ -97,7 +112,6 @@ def send_start_template(
     except Exception:
         logger.exception("Failed to send WhatsApp start template")
         delivery.status = DeliveryStatus.FAILED
-        raise
 
 
 def _send_question(
@@ -273,16 +287,21 @@ def _handle_start(
     to_e164: str,
     port: WhatsAppPort,
 ) -> None:
-    occurrence = assignments_repo.get_latest_open_occurrence_for_player(db, player_id)
+    # Only WhatsApp-channel occurrences — a newer in-app assign must not steal START.
+    occurrence = assignments_repo.get_latest_open_occurrence_for_player(
+        db, player_id, channel=AssignmentChannel.WHATSAPP
+    )
     if occurrence is None:
-        latest = assignments_repo.get_latest_occurrence_for_player(db, player_id)
+        latest = assignments_repo.get_latest_occurrence_for_player(
+            db, player_id, channel=AssignmentChannel.WHATSAPP
+        )
         if latest is not None and latest.status == OccurrenceStatus.COMPLETED:
             port.send_text(to_e164=to_e164, body="Already submitted")
             db.commit()
         return
 
     assignment = assignments_repo.get_assignment_by_id(db, occurrence.assignment_id)
-    if assignment is None:
+    if assignment is None or assignment.channel != AssignmentChannel.WHATSAPP:
         return
 
     questions = assignment.questions_snapshot
@@ -323,7 +342,7 @@ def _handle_interactive_reply(
         return
 
     assignment = assignments_repo.get_assignment_by_id(db, occurrence.assignment_id)
-    if assignment is None:
+    if assignment is None or assignment.channel != AssignmentChannel.WHATSAPP:
         return
 
     questions = assignment.questions_snapshot
@@ -394,16 +413,20 @@ def _resend_current(
     to_e164: str,
     port: WhatsAppPort,
 ) -> None:
-    occurrence = assignments_repo.get_latest_open_occurrence_for_player(db, player_id)
+    occurrence = assignments_repo.get_latest_open_occurrence_for_player(
+        db, player_id, channel=AssignmentChannel.WHATSAPP
+    )
     if occurrence is None:
-        latest = assignments_repo.get_latest_occurrence_for_player(db, player_id)
+        latest = assignments_repo.get_latest_occurrence_for_player(
+            db, player_id, channel=AssignmentChannel.WHATSAPP
+        )
         if latest is not None and latest.status == OccurrenceStatus.COMPLETED:
             port.send_text(to_e164=to_e164, body="Already submitted")
             db.commit()
         return
 
     assignment = assignments_repo.get_assignment_by_id(db, occurrence.assignment_id)
-    if assignment is None:
+    if assignment is None or assignment.channel != AssignmentChannel.WHATSAPP:
         return
     question = _current_question(assignment.questions_snapshot, occurrence.cursor)
     if question is None:

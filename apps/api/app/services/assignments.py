@@ -132,7 +132,9 @@ def create_assignment(
     if questionnaire.locked_at is None:
         questionnaire.locked_at = now
 
-    wa_port = whatsapp or get_whatsapp_port()
+    # Queue WhatsApp start deliveries in-DB first; call Meta only after commit
+    # so a mid-loop send failure cannot roll back the assignment (ghost messages).
+    pending_starts: list[tuple[uuid.UUID, str, str, str]] = []
     for player_id in target_player_ids:
         assignments_repo.add_assignment_target(
             db, assignment_id=assignment.id, user_id=player_id
@@ -147,17 +149,35 @@ def create_assignment(
         )
         if channel == AssignmentChannel.WHATSAPP:
             player = players_by_id[player_id]
-            whatsapp_survey.send_start_template(
-                db,
-                occurrence=occurrence,
-                player_name=player.name,
-                questionnaire_name=questionnaire.name,
-                to_e164=player.phone_e164,
-                channel=wa_port,
+            assert player.phone_e164 is not None
+            delivery = whatsapp_survey.queue_start_delivery(
+                db, occurrence=occurrence
+            )
+            pending_starts.append(
+                (
+                    delivery.id,
+                    player.name,
+                    questionnaire.name,
+                    player.phone_e164,
+                )
             )
 
     db.commit()
     db.refresh(assignment)
+
+    if pending_starts:
+        wa_port = whatsapp or get_whatsapp_port()
+        for delivery_id, player_name, questionnaire_name, to_e164 in pending_starts:
+            whatsapp_survey.dispatch_queued_start(
+                db,
+                delivery_id=delivery_id,
+                player_name=player_name,
+                questionnaire_name=questionnaire_name,
+                to_e164=to_e164,
+                channel=wa_port,
+            )
+        db.commit()
+
     count = assignments_repo.count_occurrences_for_assignment(db, assignment.id)
     return assignment, count
 

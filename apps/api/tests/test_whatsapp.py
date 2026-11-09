@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import (
+    Assignment,
     Delivery,
     DeliveryKind,
+    DeliveryStatus,
     OccurrenceStatus,
     PlayerOccurrence,
     Response,
@@ -26,6 +28,50 @@ from tests.helpers import (
     bootstrap_player_on_team,
     token_from_invite_link,
 )
+
+
+class _FailAfterFirstTemplate(InMemoryWhatsApp):
+    """Succeeds the first template send, then raises (simulates Meta mid-loop failure)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._template_calls = 0
+
+    def send_template(
+        self,
+        *,
+        to_e164: str,
+        template_name: str,
+        body_params: list[str],
+    ) -> str:
+        self._template_calls += 1
+        if self._template_calls >= 2:
+            raise RuntimeError("simulated Meta failure")
+        return super().send_template(
+            to_e164=to_e164,
+            template_name=template_name,
+            body_params=body_params,
+        )
+
+
+class _FailFirstQuestionSend(InMemoryWhatsApp):
+    """First interactive send fails; later ones succeed (same webhook batch)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._fail_next_interactive = True
+
+    def send_interactive_buttons(self, **kwargs: object) -> str:  # type: ignore[override]
+        if self._fail_next_interactive:
+            self._fail_next_interactive = False
+            raise RuntimeError("simulated question send failure")
+        return super().send_interactive_buttons(**kwargs)  # type: ignore[arg-type]
+
+    def send_interactive_list(self, **kwargs: object) -> str:  # type: ignore[override]
+        if self._fail_next_interactive:
+            self._fail_next_interactive = False
+            raise RuntimeError("simulated question send failure")
+        return super().send_interactive_list(**kwargs)  # type: ignore[arg-type]
 
 APP_SECRET = "test-whatsapp-app-secret"
 VERIFY_TOKEN = "test-verify-token"
@@ -285,6 +331,104 @@ def test_short_text_whatsapp_assign_returns_422(
     assert "short_text" in bad.json()["detail"]
 
 
+def test_whatsapp_assign_commits_before_send_partial_failure(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    """If a later Meta send fails, earlier players keep a durable assignment.
+
+    Commit-then-send: the HTTP assign succeeds, occurrences remain, the first
+    delivery is SENT with a provider id, and the failed one is FAILED — not rolled
+    back (which would leave ghost WhatsApp messages for a missing assignment).
+    """
+    port = _FailAfterFirstTemplate()
+    set_whatsapp_port(port)
+    try:
+        coach_headers, _ = bootstrap_coach(
+            client,
+            club_name="Partial WA FC",
+            admin_email="partial-wa-admin@example.com",
+            coach_email="partial-wa-coach@example.com",
+        )
+        created = client.post(
+            "/api/v1/questionnaires",
+            headers=coach_headers,
+            json={
+                "name": "Partial WA",
+                "questions": _three_question_payload()[:1],
+            },
+        )
+        assert created.status_code == 200
+        team = client.post(
+            "/api/v1/teams",
+            headers=coach_headers,
+            json={"name": "Partial Team"},
+        ).json()
+        for i, phone in enumerate(["+15550001001", "+15550001002"]):
+            invite = client.post(
+                f"/api/v1/teams/{team['id']}/players",
+                headers=coach_headers,
+                json={
+                    "name": f"Player {i}",
+                    "email": f"partial-wa-{i}@example.com",
+                    "phone_e164": phone,
+                },
+            )
+            assert invite.status_code == 200
+            accepted = client.post(
+                "/api/v1/auth/accept-invite",
+                json={
+                    "token": token_from_invite_link(invite.json()["invite_link"]),
+                    "password": "playerpass1",
+                },
+            )
+            assert accepted.status_code == 200
+
+        due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+        assigned = client.post(
+            "/api/v1/assignments",
+            headers=coach_headers,
+            json={
+                "questionnaire_id": created.json()["id"],
+                "target_type": "team",
+                "team_id": team["id"],
+                "due_at": due,
+                "channel": "whatsapp",
+            },
+        )
+        assert assigned.status_code == 200, assigned.text
+        assert assigned.json()["occurrence_count"] == 2
+        assignment_id = assigned.json()["id"]
+
+        db.expire_all()
+        assert db.get(Assignment, assignment_id) is not None
+        occurrences = list(
+            db.scalars(
+                select(PlayerOccurrence).where(
+                    PlayerOccurrence.assignment_id == assignment_id
+                )
+            )
+        )
+        assert len(occurrences) == 2
+        deliveries = list(
+            db.scalars(
+                select(Delivery).where(
+                    Delivery.occurrence_id.in_([o.id for o in occurrences])
+                )
+            )
+        )
+        assert len(deliveries) == 2
+        statuses = {d.status for d in deliveries}
+        assert DeliveryStatus.SENT in statuses
+        assert DeliveryStatus.FAILED in statuses
+        sent = next(d for d in deliveries if d.status == DeliveryStatus.SENT)
+        assert sent.provider_message_id
+        assert len(port.sent) == 1
+    finally:
+        set_whatsapp_port(None)
+
+
 def test_missing_phone_whatsapp_assign_returns_422(
     client: TestClient, superadmin: User, wa_memory: InMemoryWhatsApp
 ) -> None:
@@ -320,6 +464,168 @@ def test_missing_phone_whatsapp_assign_returns_422(
     )
     assert bad.status_code == 422
     assert "phone_e164" in bad.json()["detail"]
+
+
+def test_webhook_rolls_back_dirty_session_on_handler_error(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    """A failed message must not leave dirty rows for a later commit in-batch."""
+    port = _FailFirstQuestionSend()
+    set_whatsapp_port(port)
+    try:
+        _bootstrap_wa_assignment(
+            client, club_suffix="dirty-session", phone="+15559876543"
+        )
+        db.expire_all()
+        occurrence = db.scalar(select(PlayerOccurrence).limit(1))
+        assert occurrence is not None
+        occurrence_id = occurrence.id
+        assert occurrence.status == OccurrenceStatus.PENDING
+
+        # Same HTTP request: first START mutates then fails; second START commits.
+        # Without rollback, the failed attempt's delivery/status ride the 2nd commit.
+        batch = {
+            "object": "whatsapp_business_account",
+            "entry": [
+                {
+                    "id": "WABA",
+                    "changes": [
+                        {
+                            "value": {
+                                "messaging_product": "whatsapp",
+                                "messages": [
+                                    {
+                                        "from": "15559876543",
+                                        "id": "wamid.dirty-start-1",
+                                        "timestamp": "1",
+                                        "type": "button",
+                                        "button": {
+                                            "payload": "START",
+                                            "text": "Start",
+                                        },
+                                    },
+                                    {
+                                        "from": "15559876543",
+                                        "id": "wamid.dirty-start-2",
+                                        "timestamp": "2",
+                                        "type": "button",
+                                        "button": {
+                                            "payload": "START",
+                                            "text": "Start",
+                                        },
+                                    },
+                                ],
+                            },
+                            "field": "messages",
+                        }
+                    ],
+                }
+            ],
+        }
+        assert _post_webhook(client, batch).status_code == 200
+
+        db.expire_all()
+        occurrence = db.get(PlayerOccurrence, occurrence_id)
+        assert occurrence is not None
+        assert occurrence.status == OccurrenceStatus.IN_PROGRESS
+        assert occurrence.cursor == 0
+        question_deliveries = list(
+            db.scalars(
+                select(Delivery).where(
+                    Delivery.occurrence_id == occurrence_id,
+                    Delivery.kind == DeliveryKind.QUESTION,
+                )
+            )
+        )
+        # Only the successful second START should leave a question delivery.
+        assert len(question_deliveries) == 1
+        assert question_deliveries[0].status == DeliveryStatus.SENT
+    finally:
+        set_whatsapp_port(None)
+
+
+def test_start_ignores_newer_in_app_assignment(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    wa_memory: InMemoryWhatsApp,
+) -> None:
+    """START must bind to the WhatsApp occurrence, not a newer in-app one."""
+    coach_headers, team_id, _, questionnaire_id = _bootstrap_wa_assignment(
+        client, club_suffix="channel-steal", phone="+15557654321"
+    )
+    due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    # Newer in-app assignment with short_text would break WA sends if START stole it.
+    short_q = client.post(
+        "/api/v1/questionnaires",
+        headers=coach_headers,
+        json={
+            "name": "In-app notes",
+            "questions": [
+                {
+                    "id": "note",
+                    "prompt": "Notes?",
+                    "type": "short_text",
+                    "required": True,
+                    "max_length": 100,
+                }
+            ],
+        },
+    )
+    assert short_q.status_code == 200
+    in_app = client.post(
+        "/api/v1/assignments",
+        headers=coach_headers,
+        json={
+            "questionnaire_id": short_q.json()["id"],
+            "target_type": "team",
+            "team_id": team_id,
+            "due_at": due,
+            "channel": "in_app",
+        },
+    )
+    assert in_app.status_code == 200
+
+    db.expire_all()
+    wa_occ = db.scalar(
+        select(PlayerOccurrence)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .where(Assignment.channel == "whatsapp")
+        .limit(1)
+    )
+    in_app_occ = db.scalar(
+        select(PlayerOccurrence)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .where(Assignment.channel == "in_app")
+        .limit(1)
+    )
+    assert wa_occ is not None and in_app_occ is not None
+    assert in_app_occ.created_at >= wa_occ.created_at
+
+    wa_memory.clear()
+    response = _post_webhook(
+        client,
+        _message_envelope(
+            {
+                "from": "15557654321",
+                "id": "wamid.start-channel",
+                "timestamp": "1",
+                "type": "button",
+                "button": {"payload": "START", "text": "Start"},
+            }
+        ),
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    wa_occ = db.get(PlayerOccurrence, wa_occ.id)
+    in_app_occ = db.get(PlayerOccurrence, in_app_occ.id)
+    assert wa_occ is not None and in_app_occ is not None
+    assert wa_occ.status == OccurrenceStatus.IN_PROGRESS
+    assert in_app_occ.status == OccurrenceStatus.PENDING
+    assert any(m.kind == "buttons" for m in wa_memory.sent)
 
 
 def test_start_moves_pending_to_in_progress_and_sends_first_question(

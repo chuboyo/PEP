@@ -84,11 +84,15 @@ async def receive_whatsapp_webhook(
                 message_id = status_item.get("id")
                 status_value = status_item.get("status")
                 if message_id and status_value:
-                    whatsapp_survey.apply_status_callback(
-                        db,
-                        provider_message_id=str(message_id),
-                        status_value=str(status_value),
-                    )
+                    try:
+                        whatsapp_survey.apply_status_callback(
+                            db,
+                            provider_message_id=str(message_id),
+                            status_value=str(status_value),
+                        )
+                    except Exception:
+                        logger.exception("Failed processing WhatsApp status callback")
+                        db.rollback()
             for message in value.get("messages") or []:
                 _dispatch_message(db, message=message, port=port)
 
@@ -122,4 +126,7 @@ def _dispatch_message(db: Session, *, message: dict[str, Any], port: Any) -> Non
             channel=port,
         )
     except Exception:
+        # Drop in-memory cursor/status/delivery mutations so a later commit in
+        # this same webhook request cannot persist a half-failed message.
         logger.exception("Failed processing WhatsApp inbound message")
+        db.rollback()

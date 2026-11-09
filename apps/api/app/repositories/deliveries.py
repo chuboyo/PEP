@@ -29,6 +29,10 @@ def create_delivery(
     return row
 
 
+def get_by_id(db: Session, delivery_id: uuid.UUID) -> Delivery | None:
+    return db.get(Delivery, delivery_id)
+
+
 def get_by_provider_message_id(
     db: Session, provider_message_id: str
 ) -> Delivery | None:
