@@ -919,3 +919,95 @@ def test_status_callback_updates_delivery(
     delivery = db.get(Delivery, delivery.id)
     assert delivery is not None
     assert delivery.status.value == "delivered"
+
+
+def test_provider_message_id_committed_per_send(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    """After each template send, provider_message_id must be queryable (not batched)."""
+    from unittest.mock import patch
+
+    from sqlalchemy.orm import Session as SaSession
+
+    port = InMemoryWhatsApp()
+    set_whatsapp_port(port)
+    visible_mids: list[str] = []
+    orig_commit = SaSession.commit
+
+    def commit_and_assert_sent_ids_visible(self: SaSession, *args: object, **kwargs: object):
+        result = orig_commit(self, *args, **kwargs)
+        db.expire_all()
+        for msg in port.sent:
+            found = db.scalar(
+                select(Delivery).where(
+                    Delivery.provider_message_id == msg.provider_message_id
+                )
+            )
+            if found is not None:
+                visible_mids.append(msg.provider_message_id)
+        return result
+
+    try:
+        coach_headers, _ = bootstrap_coach(
+            client,
+            club_name="PerSend FC",
+            admin_email="persend-admin@example.com",
+            coach_email="persend-coach@example.com",
+        )
+        created = client.post(
+            "/api/v1/questionnaires",
+            headers=coach_headers,
+            json={
+                "name": "PerSend",
+                "questions": _three_question_payload()[:1],
+            },
+        )
+        assert created.status_code == 200
+        team = client.post(
+            "/api/v1/teams",
+            headers=coach_headers,
+            json={"name": "PerSend Team"},
+        ).json()
+        for i, phone in enumerate(["+15550002001", "+15550002002"]):
+            invite = client.post(
+                f"/api/v1/teams/{team['id']}/players",
+                headers=coach_headers,
+                json={
+                    "name": f"P{i}",
+                    "email": f"persend-{i}@example.com",
+                    "phone_e164": phone,
+                },
+            )
+            assert invite.status_code == 200
+            client.post(
+                "/api/v1/auth/accept-invite",
+                json={
+                    "token": token_from_invite_link(invite.json()["invite_link"]),
+                    "password": "playerpass1",
+                },
+            )
+
+        due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+        with patch.object(SaSession, "commit", commit_and_assert_sent_ids_visible):
+            assigned = client.post(
+                "/api/v1/assignments",
+                headers=coach_headers,
+                json={
+                    "questionnaire_id": created.json()["id"],
+                    "target_type": "team",
+                    "team_id": team["id"],
+                    "due_at": due,
+                    "channel": "whatsapp",
+                },
+            )
+        assert assigned.status_code == 200, assigned.text
+        assert len(port.sent) == 2
+        # First send's id must appear in a visibility check before the second
+        # send finishes — i.e. committed mid-loop, not only at the end.
+        assert port.sent[0].provider_message_id in visible_mids
+        assert visible_mids.index(port.sent[0].provider_message_id) < len(visible_mids)
+        assert port.sent[1].provider_message_id in visible_mids
+    finally:
+        set_whatsapp_port(None)

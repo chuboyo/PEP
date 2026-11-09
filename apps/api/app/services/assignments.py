@@ -176,7 +176,9 @@ def create_assignment(
                 to_e164=to_e164,
                 channel=wa_port,
             )
-        db.commit()
+            # Commit per send so status webhooks can resolve provider_message_id
+            # while the rest of the team loop is still in flight.
+            db.commit()
 
     count = assignments_repo.count_occurrences_for_assignment(db, assignment.id)
     return assignment, count

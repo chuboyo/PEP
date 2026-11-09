@@ -94,7 +94,8 @@ def dispatch_queued_start(
     """Send a previously committed queued start template. Never raises to caller.
 
     Assignment rows must already be committed so a Meta failure cannot roll them
-    back, and status webhooks can resolve provider_message_id.
+    back. Caller should commit after each dispatch so provider_message_id is
+    visible to concurrent status webhooks before the next send.
     """
     port = channel or get_whatsapp_port()
     settings = get_settings()
