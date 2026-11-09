@@ -1135,6 +1135,108 @@
           }
         }
       }
+    },
+    "/api/v1/webhooks/whatsapp": {
+      "get": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Verify Whatsapp Webhook",
+        "operationId": "verify_whatsapp_webhook_api_v1_webhooks_whatsapp_get",
+        "parameters": [
+          {
+            "name": "hub.mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hub.Mode"
+            }
+          },
+          {
+            "name": "hub.verify_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hub.Verify Token"
+            }
+          },
+          {
+            "name": "hub.challenge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hub.Challenge"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Receive Whatsapp Webhook",
+        "operationId": "receive_whatsapp_webhook_api_v1_webhooks_whatsapp_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Receive Whatsapp Webhook Api V1 Webhooks Whatsapp Post"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

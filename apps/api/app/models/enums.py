@@ -57,3 +57,18 @@ class RoutineAssignmentStatus(str, enum.Enum):
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+
+
+class DeliveryKind(str, enum.Enum):
+    SURVEY_START = "survey_start"
+    QUESTION = "question"
+    REMINDER = "reminder"
+
+
+class DeliveryStatus(str, enum.Enum):
+    QUEUED = "queued"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    READ = "read"
+    RESPONDED = "responded"
+    FAILED = "failed"

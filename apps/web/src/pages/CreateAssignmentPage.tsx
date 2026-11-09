@@ -21,6 +21,7 @@ export function CreateAssignmentPage() {
   const [questionnaireId, setQuestionnaireId] = useState("");
   const [teamId, setTeamId] = useState("");
   const [dueAt, setDueAt] = useState("");
+  const [channel, setChannel] = useState<"in_app" | "whatsapp">("in_app");
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function CreateAssignmentPage() {
         target_type: "team",
         team_id: teamId,
         due_at: due.toISOString(),
-        channel: "in_app",
+        channel,
         schedule: "once",
       },
       {
@@ -134,6 +135,18 @@ export function CreateAssignmentPage() {
               onChange={(e) => setDueAt(e.target.value)}
               required
             />
+          </label>
+          <label className="field">
+            <span>Channel</span>
+            <select
+              value={channel}
+              onChange={(e) =>
+                setChannel(e.target.value as "in_app" | "whatsapp")
+              }
+            >
+              <option value="in_app">In app</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
           </label>
           {errorMessage ? (
             <p className="alert" role="alert">
