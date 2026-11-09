@@ -1,5 +1,6 @@
 from app.repositories import (
     assignments,
+    deliveries,
     invitations,
     organizations,
     questionnaires,
@@ -9,6 +10,7 @@ from app.repositories import (
 
 __all__ = [
     "assignments",
+    "deliveries",
     "invitations",
     "organizations",
     "questionnaires",

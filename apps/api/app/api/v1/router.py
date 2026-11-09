@@ -10,6 +10,7 @@ from app.api.v1 import (
     questionnaires,
     routines,
     teams,
+    webhooks,
 )
 
 api_router = APIRouter()
@@ -22,3 +23,4 @@ api_router.include_router(assignments.router)
 api_router.include_router(routines.router)
 api_router.include_router(player.router)
 api_router.include_router(players.router)
+api_router.include_router(webhooks.router)

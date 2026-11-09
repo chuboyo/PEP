@@ -232,7 +232,7 @@ def test_player_cannot_submit_another_players_occurrence(
     assert denied.status_code == 404
 
 
-def test_channel_whatsapp_returns_422(
+def test_channel_whatsapp_without_phone_returns_422(
     client: TestClient,
     superadmin: User,
 ) -> None:
@@ -262,6 +262,7 @@ def test_channel_whatsapp_returns_422(
         },
     )
     assert bad.status_code == 422
+    assert "phone_e164" in bad.json()["detail"]
 
 
 def test_assign_superseded_questionnaire_returns_422(

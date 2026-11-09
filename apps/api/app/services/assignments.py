@@ -20,6 +20,7 @@ from app.models import (
     OccurrenceStatus,
     Response,
 )
+from app.ports.whatsapp import WhatsAppPort, get_whatsapp_port
 from app.repositories import assignments as assignments_repo
 from app.repositories import questionnaires as questionnaires_repo
 from app.repositories import teams as teams_repo
@@ -30,6 +31,7 @@ from app.schemas.player_history import (
     PlayerHistoryOut,
     RatingTrendOut,
 )
+from app.services import whatsapp_survey
 
 
 def _require_coach_org(principal: Principal) -> uuid.UUID:
@@ -50,13 +52,14 @@ def create_assignment(
     due_at: datetime | None,
     channel: AssignmentChannel,
     schedule: AssignmentSchedule,
+    whatsapp: WhatsAppPort | None = None,
 ) -> tuple[Assignment, int]:
     org_id = _require_coach_org(principal)
 
-    if channel != AssignmentChannel.IN_APP:
+    if channel not in (AssignmentChannel.IN_APP, AssignmentChannel.WHATSAPP):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Only channel=in_app is supported in this slice",
+            detail="Unsupported channel",
         )
     if schedule != AssignmentSchedule.ONCE:
         raise HTTPException(
@@ -78,6 +81,14 @@ def create_assignment(
             detail="Questionnaire is not the latest version",
         )
 
+    if channel == AssignmentChannel.WHATSAPP and _has_short_text(
+        questionnaire.questions
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="WhatsApp assignments cannot include short_text questions",
+        )
+
     target_player_ids = _resolve_target_player_ids(
         db,
         principal=principal,
@@ -92,6 +103,17 @@ def create_assignment(
             detail="No players to assign",
         )
 
+    players_by_id: dict[uuid.UUID, Any] = {}
+    if channel == AssignmentChannel.WHATSAPP:
+        for player_id in target_player_ids:
+            user = users_repo.get_user_by_id(db, player_id)
+            if user is None or not user.phone_e164:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="All WhatsApp targets must have phone_e164",
+                )
+            players_by_id[player_id] = user
+
     snapshot = copy.deepcopy(questionnaire.questions)
     now = datetime.now(UTC)
     assignment = assignments_repo.create_assignment(
@@ -104,17 +126,18 @@ def create_assignment(
         team_id=team_id if target_type == AssignmentTargetType.TEAM else None,
         schedule=AssignmentSchedule.ONCE,
         due_at=due_at,
-        channel=AssignmentChannel.IN_APP,
+        channel=channel,
     )
 
     if questionnaire.locked_at is None:
         questionnaire.locked_at = now
 
+    wa_port = whatsapp or get_whatsapp_port()
     for player_id in target_player_ids:
         assignments_repo.add_assignment_target(
             db, assignment_id=assignment.id, user_id=player_id
         )
-        assignments_repo.create_occurrence(
+        occurrence = assignments_repo.create_occurrence(
             db,
             assignment_id=assignment.id,
             organization_id=org_id,
@@ -122,11 +145,27 @@ def create_assignment(
             window_start=now,
             due_at=due_at,
         )
+        if channel == AssignmentChannel.WHATSAPP:
+            player = players_by_id[player_id]
+            whatsapp_survey.send_start_template(
+                db,
+                occurrence=occurrence,
+                player_name=player.name,
+                questionnaire_name=questionnaire.name,
+                to_e164=player.phone_e164,
+                channel=wa_port,
+            )
 
     db.commit()
     db.refresh(assignment)
     count = assignments_repo.count_occurrences_for_assignment(db, assignment.id)
     return assignment, count
+
+
+def _has_short_text(questions: list[dict[str, Any]]) -> bool:
+    return any(
+        isinstance(q, dict) and q.get("type") == "short_text" for q in questions
+    )
 
 
 def _resolve_target_player_ids(

@@ -149,7 +149,11 @@ def list_occurrences_for_player(
             .where(PlayerOccurrence.player_id == player_id)
             .where(
                 PlayerOccurrence.status.in_(
-                    [OccurrenceStatus.PENDING, OccurrenceStatus.COMPLETED]
+                    [
+                        OccurrenceStatus.PENDING,
+                        OccurrenceStatus.IN_PROGRESS,
+                        OccurrenceStatus.COMPLETED,
+                    ]
                 )
             )
             .order_by(PlayerOccurrence.created_at.desc())
@@ -169,12 +173,43 @@ def list_occurrence_details_for_player(
         .where(PlayerOccurrence.player_id == player_id)
         .where(
             PlayerOccurrence.status.in_(
-                [OccurrenceStatus.PENDING, OccurrenceStatus.COMPLETED]
+                [
+                    OccurrenceStatus.PENDING,
+                    OccurrenceStatus.IN_PROGRESS,
+                    OccurrenceStatus.COMPLETED,
+                ]
             )
         )
         .order_by(PlayerOccurrence.created_at.desc())
     ).all()
     return [(occurrence, assignment, name) for occurrence, assignment, name in rows]
+
+
+def get_latest_open_occurrence_for_player(
+    db: Session, player_id: uuid.UUID
+) -> PlayerOccurrence | None:
+    return db.scalar(
+        select(PlayerOccurrence)
+        .where(
+            PlayerOccurrence.player_id == player_id,
+            PlayerOccurrence.status.in_(
+                [OccurrenceStatus.PENDING, OccurrenceStatus.IN_PROGRESS]
+            ),
+        )
+        .order_by(PlayerOccurrence.created_at.desc())
+        .limit(1)
+    )
+
+
+def get_latest_occurrence_for_player(
+    db: Session, player_id: uuid.UUID
+) -> PlayerOccurrence | None:
+    return db.scalar(
+        select(PlayerOccurrence)
+        .where(PlayerOccurrence.player_id == player_id)
+        .order_by(PlayerOccurrence.created_at.desc())
+        .limit(1)
+    )
 
 
 def get_assignment_by_id(db: Session, assignment_id: uuid.UUID) -> Assignment | None:

@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     # Set true only for local convenience.
     seed_superadmin_on_startup: bool = False
 
+    # WhatsApp Cloud API (optional; empty → in-memory adapter for local/CI).
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_app_secret: str = ""
+    whatsapp_verify_token: str = ""
+    whatsapp_template_start: str = "pep_survey_start"
+    whatsapp_template_reminder: str = "pep_survey_reminder"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
