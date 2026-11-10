@@ -877,6 +877,76 @@ def test_full_survey_one_response_second_tap_no_duplicate(
     )
 
 
+def test_missed_occurrence_ignores_stale_whatsapp_reply(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    wa_memory: InMemoryWhatsApp,
+) -> None:
+    """After deactivate marks MISSED, button taps must not complete the survey."""
+    coach_headers, _team_id, _email, _qid = _bootstrap_wa_assignment(
+        client, club_suffix="missed-reply"
+    )
+    me = client.get("/api/v1/me", headers=coach_headers).json()
+    org_id = me["memberships"][0]["organization_id"]
+    occurrence = db.scalar(select(PlayerOccurrence).limit(1))
+    assert occurrence is not None
+    oid = occurrence.id
+    player_id = str(occurrence.player_id)
+
+    _post_webhook(
+        client,
+        _message_envelope(
+            {
+                "from": "15551234567",
+                "id": "wamid.missed.start",
+                "timestamp": "1",
+                "type": "button",
+                "button": {"payload": "START", "text": "Start"},
+            }
+        ),
+    )
+
+    deact = client.post(
+        f"/api/v1/organizations/{org_id}/players/{player_id}/deactivate",
+        headers=coach_headers,
+    )
+    assert deact.status_code == 204
+
+    db.expire_all()
+    occurrence = db.get(PlayerOccurrence, oid)
+    assert occurrence is not None
+    assert occurrence.status == OccurrenceStatus.MISSED
+
+    yes_id = reply_id(occurrence_id=oid, question_id="ready", value="yes")
+    assert (
+        _post_webhook(
+            client,
+            _message_envelope(
+                {
+                    "from": "15551234567",
+                    "id": "wamid.missed.yes",
+                    "timestamp": "2",
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {"id": yes_id, "title": "Yes"},
+                    },
+                }
+            ),
+        ).status_code
+        == 200
+    )
+
+    db.expire_all()
+    occurrence = db.get(PlayerOccurrence, oid)
+    assert occurrence is not None
+    assert occurrence.status == OccurrenceStatus.MISSED
+    assert (
+        db.scalar(select(Response).where(Response.occurrence_id == oid)) is None
+    )
+
+
 def test_status_callback_updates_delivery(
     client: TestClient,
     superadmin: User,

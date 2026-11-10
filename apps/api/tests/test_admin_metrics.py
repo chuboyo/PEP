@@ -13,6 +13,8 @@ from app.models import (
     AssignmentTarget,
     OccurrenceStatus,
     PlayerOccurrence,
+    RoutineAssignment,
+    RoutineAssignmentStatus,
     User,
 )
 from tests.helpers import (
@@ -299,6 +301,7 @@ def test_deactivate_accepted_coach_can_be_reinvited(
         },
     )
     assert accepted.status_code == 200
+    old_refresh = accepted.json()["refresh_token"]
     coaches = client.get(
         f"/api/v1/organizations/{org_id}/coaches",
         headers=admin_headers,
@@ -325,6 +328,13 @@ def test_deactivate_accepted_coach_can_be_reinvited(
         },
     )
     assert ok.status_code == 200
+
+    # Prior occupant's refresh must not mint tokens for the reclaimed account.
+    stolen = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": old_refresh},
+    )
+    assert stolen.status_code == 401
 
 
 def test_deactivate_coach_blocks_login_and_stale_token(
@@ -406,6 +416,98 @@ def test_deactivate_coach_blocks_login_and_stale_token(
         },
     )
     assert stale_assign.status_code == 403
+
+
+def test_deactivate_player_removes_open_routines(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    coach_headers, org_id = bootstrap_coach(
+        client,
+        club_name="Routine Deact FC",
+        admin_email="routine-deact-admin@example.com",
+        coach_email="routine-deact-coach@example.com",
+    )
+    player_headers, team_id, player_email = bootstrap_player_on_team(
+        client,
+        coach_headers,
+        team_name="Routine Deact Team",
+        player_email="routine-deact-player@example.com",
+    )
+    player_id = client.get("/api/v1/me", headers=player_headers).json()["id"]
+    created = client.post(
+        "/api/v1/routines",
+        headers=coach_headers,
+        json={
+            "name": "Recovery day",
+            "description": "Light recovery work",
+            "objective": "Reduce fatigue",
+            "exercises": [{"name": "Light cycling", "duration_minutes": 10}],
+            "duration_minutes": 10,
+            "intensity": "low",
+            "frequency": "as needed",
+            "start_date": datetime.now(UTC).date().isoformat(),
+            "end_date": (datetime.now(UTC) + timedelta(days=7)).date().isoformat(),
+            "instructions": "Easy",
+            "team_id": team_id,
+        },
+    )
+    assert created.status_code == 200
+    listed = client.get("/api/v1/routines", headers=player_headers)
+    assert listed.status_code == 200
+    assert len(listed.json()) == 1
+    assignment_id = listed.json()[0]["id"]
+    started = client.post(
+        f"/api/v1/player/routines/{assignment_id}/status",
+        headers=player_headers,
+        json={"status": "in_progress"},
+    )
+    assert started.status_code == 200
+
+    deact = client.post(
+        f"/api/v1/organizations/{org_id}/players/{player_id}/deactivate",
+        headers=coach_headers,
+    )
+    assert deact.status_code == 204
+
+    db.expire_all()
+    open_rows = list(
+        db.scalars(
+            select(RoutineAssignment).where(
+                RoutineAssignment.player_id == player_id,
+                RoutineAssignment.status.in_(
+                    [
+                        RoutineAssignmentStatus.NOT_STARTED,
+                        RoutineAssignmentStatus.IN_PROGRESS,
+                    ]
+                ),
+            )
+        )
+    )
+    assert open_rows == []
+
+    # Reinvite same email — open routines must not reappear.
+    invite = client.post(
+        f"/api/v1/teams/{team_id}/players",
+        headers=coach_headers,
+        json={"name": "Pat Player", "email": player_email},
+    )
+    assert invite.status_code == 200
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(invite.json()["invite_link"]),
+            "password": "playerpass2",
+        },
+    )
+    assert accepted.status_code == 200
+    new_headers = {
+        "Authorization": f"Bearer {accepted.json()['access_token']}"
+    }
+    listed_again = client.get("/api/v1/routines", headers=new_headers)
+    assert listed_again.status_code == 200
+    assert listed_again.json() == []
 
 
 def test_deactivate_player_closes_surveys_and_stops_recurrence(

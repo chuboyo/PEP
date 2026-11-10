@@ -338,5 +338,7 @@ def accept_invite(db: Session, *, token: str, password: str) -> TokenResponse:
     user.status = UserStatus.ACTIVE
     membership.status = MembershipStatus.ACTIVE
     invitation.accepted_at = now
+    # Drop any stale refresh tokens from a prior occupant of this user row.
+    users_repo.revoke_refresh_tokens_for_user(db, user.id)
     db.flush()
     return auth_service.issue_token_pair(db, user.id)

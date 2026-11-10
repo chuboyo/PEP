@@ -16,6 +16,7 @@ from app.models import (
     DeliveryStatus,
     OccurrenceStatus,
     PlayerOccurrence,
+    UserStatus,
 )
 from app.ports.whatsapp import (
     InteractiveButton,
@@ -307,6 +308,9 @@ def handle_inbound_message(
     if user is None or not user.phone_e164:
         logger.info("Ignoring WhatsApp message from unknown sender")
         return
+    if user.status != UserStatus.ACTIVE:
+        logger.info("Ignoring WhatsApp message from inactive user %s", user.id)
+        return
 
     to_e164 = user.phone_e164
 
@@ -387,6 +391,17 @@ def _handle_interactive_reply(
     if occurrence.status == OccurrenceStatus.COMPLETED:
         port.send_text(to_e164=to_e164, body="Already submitted")
         db.commit()
+        return
+    if occurrence.status not in (
+        OccurrenceStatus.PENDING,
+        OccurrenceStatus.IN_PROGRESS,
+    ):
+        # MISSED (e.g. after player deactivate) must not be completed from stale taps.
+        logger.info(
+            "Ignoring WhatsApp reply for non-open occurrence %s (%s)",
+            occurrence.id,
+            occurrence.status,
+        )
         return
 
     assignment = assignments_repo.get_assignment_by_id(db, occurrence.assignment_id)

@@ -117,6 +117,7 @@ def deactivate_coach(
     user.status = UserStatus.DEACTIVATED
     # Clear credentials so invite reuse can reclaim this email (see invitations).
     user.password_hash = None
+    users_repo.revoke_refresh_tokens_for_user(db, user_id)
     # Keep club teams reachable: hand off team_members to remaining coaches.
     remaining = orgs_repo.list_active_coach_ids(
         db, organization_id=organization_id, exclude_user_id=user_id
@@ -172,6 +173,7 @@ def deactivate_player(
     user.status = UserStatus.DEACTIVATED
     # Clear credentials so invite reuse can reclaim this email (see invitations).
     user.password_hash = None
+    users_repo.revoke_refresh_tokens_for_user(db, user_id)
     # Stop future surveys / WhatsApp: drop targets, leave teams, close open windows.
     assignments_repo.remove_assignment_targets_for_player_in_org(
         db, player_id=user_id, organization_id=organization_id
@@ -180,6 +182,9 @@ def deactivate_player(
         db, user_id=user_id, organization_id=organization_id
     )
     assignments_repo.miss_open_occurrences_for_player_in_org(
+        db, player_id=user_id, organization_id=organization_id
+    )
+    routines_repo.delete_open_assignments_for_player_in_org(
         db, player_id=user_id, organization_id=organization_id
     )
     db.commit()

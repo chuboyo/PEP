@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -183,3 +183,22 @@ def touch_assignment(
     assignment.updated_at = updated_at
     db.flush()
     return assignment
+
+
+def delete_open_assignments_for_player_in_org(
+    db: Session, *, player_id: uuid.UUID, organization_id: uuid.UUID
+) -> int:
+    """Remove not-started / in-progress routines so reinvite does not revive them."""
+    result = db.execute(
+        delete(RoutineAssignment).where(
+            RoutineAssignment.player_id == player_id,
+            RoutineAssignment.organization_id == organization_id,
+            RoutineAssignment.status.in_(
+                [
+                    RoutineAssignmentStatus.NOT_STARTED,
+                    RoutineAssignmentStatus.IN_PROGRESS,
+                ]
+            ),
+        )
+    )
+    return int(result.rowcount or 0)

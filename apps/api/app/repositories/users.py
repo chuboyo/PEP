@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -122,3 +123,17 @@ def create_refresh_token(
 
 def get_refresh_token_by_hash(db: Session, token_hash: str) -> RefreshToken | None:
     return db.scalar(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
+
+
+def revoke_refresh_tokens_for_user(db: Session, user_id: uuid.UUID) -> int:
+    """Invalidate all outstanding refresh tokens for this user."""
+    now = datetime.now(UTC)
+    result = db.execute(
+        update(RefreshToken)
+        .where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
+    return int(result.rowcount or 0)
