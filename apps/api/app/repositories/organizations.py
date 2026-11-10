@@ -175,3 +175,16 @@ def list_coaches_for_organization(
         .order_by(User.name.asc())
     ).all()
     return [(user, membership) for user, membership in rows]
+
+
+def list_active_coach_ids(
+    db: Session, *, organization_id: uuid.UUID, exclude_user_id: uuid.UUID | None = None
+) -> list[uuid.UUID]:
+    stmt = select(Membership.user_id).where(
+        Membership.organization_id == organization_id,
+        Membership.role == MembershipRole.COACH,
+        Membership.status == MembershipStatus.ACTIVE,
+    )
+    if exclude_user_id is not None:
+        stmt = stmt.where(Membership.user_id != exclude_user_id)
+    return list(db.scalars(stmt).all())

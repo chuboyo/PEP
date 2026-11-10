@@ -15,6 +15,7 @@ from app.models import (
 from app.repositories import assignments as assignments_repo
 from app.repositories import organizations as orgs_repo
 from app.repositories import routines as routines_repo
+from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 from app.schemas.dashboard import RoutineCountsOut
 from app.schemas.organizations import CoachListItem, OrganizationMetricsOut
@@ -114,6 +115,18 @@ def deactivate_coach(
 
     membership.status = MembershipStatus.DEACTIVATED
     user.status = UserStatus.DEACTIVATED
+    # Clear credentials so invite reuse can reclaim this email (see invitations).
+    user.password_hash = None
+    # Keep club teams reachable: hand off team_members to remaining coaches.
+    remaining = orgs_repo.list_active_coach_ids(
+        db, organization_id=organization_id, exclude_user_id=user_id
+    )
+    teams_repo.handoff_coach_teams(
+        db,
+        departing_coach_id=user_id,
+        organization_id=organization_id,
+        remaining_coach_ids=remaining,
+    )
     db.commit()
 
 
@@ -157,4 +170,16 @@ def deactivate_player(
 
     membership.status = MembershipStatus.DEACTIVATED
     user.status = UserStatus.DEACTIVATED
+    # Clear credentials so invite reuse can reclaim this email (see invitations).
+    user.password_hash = None
+    # Stop future surveys / WhatsApp: drop targets, leave teams, close open windows.
+    assignments_repo.remove_assignment_targets_for_player_in_org(
+        db, player_id=user_id, organization_id=organization_id
+    )
+    teams_repo.remove_user_from_organization_teams(
+        db, user_id=user_id, organization_id=organization_id
+    )
+    assignments_repo.miss_open_occurrences_for_player_in_org(
+        db, player_id=user_id, organization_id=organization_id
+    )
     db.commit()

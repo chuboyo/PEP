@@ -62,6 +62,53 @@ def align_player_roster(
     return add_team_member(db, team_id=team_id, user_id=user_id)
 
 
+def remove_user_from_organization_teams(
+    db: Session, *, user_id: uuid.UUID, organization_id: uuid.UUID
+) -> None:
+    db.execute(
+        delete(TeamMember).where(
+            TeamMember.user_id == user_id,
+            TeamMember.team_id.in_(
+                select(Team.id).where(Team.organization_id == organization_id)
+            ),
+        )
+    )
+
+
+def list_team_ids_for_user_in_organization(
+    db: Session, *, user_id: uuid.UUID, organization_id: uuid.UUID
+) -> list[uuid.UUID]:
+    return list(
+        db.scalars(
+            select(TeamMember.team_id)
+            .join(Team, Team.id == TeamMember.team_id)
+            .where(
+                TeamMember.user_id == user_id,
+                Team.organization_id == organization_id,
+            )
+        ).all()
+    )
+
+
+def handoff_coach_teams(
+    db: Session,
+    *,
+    departing_coach_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    remaining_coach_ids: list[uuid.UUID],
+) -> None:
+    """Add remaining coaches to the departing coach's teams, then remove them."""
+    team_ids = list_team_ids_for_user_in_organization(
+        db, user_id=departing_coach_id, organization_id=organization_id
+    )
+    for team_id in team_ids:
+        for coach_id in remaining_coach_ids:
+            add_team_member(db, team_id=team_id, user_id=coach_id)
+    remove_user_from_organization_teams(
+        db, user_id=departing_coach_id, organization_id=organization_id
+    )
+
+
 def get_team_by_id(db: Session, team_id: uuid.UUID) -> Team | None:
     return db.get(Team, team_id)
 

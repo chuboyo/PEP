@@ -3,15 +3,26 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.models import User
+from app.core.config import get_settings
+from app.models import (
+    AssignmentTarget,
+    OccurrenceStatus,
+    PlayerOccurrence,
+    User,
+)
 from tests.helpers import (
     bootstrap_coach,
     bootstrap_player_on_team,
     superadmin_headers,
     token_from_invite_link,
 )
+
+CRON_SECRET = "test-cron-secret"
 
 
 def _bootstrap_club_with_admin(
@@ -200,6 +211,122 @@ def test_coach_on_other_club_metrics_returns_404(
     assert same.status_code == 403
 
 
+def test_deactivate_coach_hands_off_teams_to_remaining_coaches(
+    client: TestClient, superadmin: User
+) -> None:
+    admin_headers, org_id = _bootstrap_club_with_admin(
+        client,
+        club_name="Handoff FC",
+        admin_email="handoff-admin@example.com",
+    )
+    invite_a = client.post(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Coach A", "email": "handoff-coach-a@example.com"},
+    ).json()
+    accept_a = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(invite_a["invite_link"]),
+            "password": "coachpass1",
+        },
+    )
+    coach_a = {"Authorization": f"Bearer {accept_a.json()['access_token']}"}
+
+    invite_b = client.post(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Coach B", "email": "handoff-coach-b@example.com"},
+    ).json()
+    accept_b = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(invite_b["invite_link"]),
+            "password": "coachpass1",
+        },
+    )
+    coach_b = {"Authorization": f"Bearer {accept_b.json()['access_token']}"}
+
+    team = client.post(
+        "/api/v1/teams",
+        headers=coach_a,
+        json={"name": "Handoff Squad"},
+    ).json()
+
+    before = client.get(f"/api/v1/teams/{team['id']}", headers=coach_b)
+    assert before.status_code == 404
+
+    coaches = client.get(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+    ).json()
+    coach_a_id = next(
+        c["user_id"] for c in coaches if c["email"] == "handoff-coach-a@example.com"
+    )
+    deact = client.post(
+        f"/api/v1/organizations/{org_id}/coaches/{coach_a_id}/deactivate",
+        headers=admin_headers,
+    )
+    assert deact.status_code == 204
+
+    after = client.get(f"/api/v1/teams/{team['id']}", headers=coach_b)
+    assert after.status_code == 200
+    assert after.json()["name"] == "Handoff Squad"
+    listed = client.get("/api/v1/teams", headers=coach_b)
+    assert listed.status_code == 200
+    assert any(t["id"] == team["id"] for t in listed.json())
+
+
+def test_deactivate_accepted_coach_can_be_reinvited(
+    client: TestClient, superadmin: User
+) -> None:
+    """Accepted then deactivated coaches must be inviteable again."""
+    admin_headers, org_id = _bootstrap_club_with_admin(
+        client,
+        club_name="Reinvite Coach FC",
+        admin_email="reinvite-coach-admin@example.com",
+    )
+    coach_invite = client.post(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Return Coach", "email": "reinvite-coach@example.com"},
+    ).json()
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(coach_invite["invite_link"]),
+            "password": "coachpass1",
+        },
+    )
+    assert accepted.status_code == 200
+    coaches = client.get(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+    ).json()
+    coach_user_id = coaches[0]["user_id"]
+
+    deact = client.post(
+        f"/api/v1/organizations/{org_id}/coaches/{coach_user_id}/deactivate",
+        headers=admin_headers,
+    )
+    assert deact.status_code == 204
+
+    reinvited = client.post(
+        f"/api/v1/organizations/{org_id}/coaches",
+        headers=admin_headers,
+        json={"name": "Return Coach", "email": "reinvite-coach@example.com"},
+    )
+    assert reinvited.status_code == 200, reinvited.text
+    ok = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(reinvited.json()["invite_link"]),
+            "password": "coachpass2",
+        },
+    )
+    assert ok.status_code == 200
+
+
 def test_deactivate_coach_blocks_login_and_stale_token(
     client: TestClient, superadmin: User
 ) -> None:
@@ -279,6 +406,105 @@ def test_deactivate_coach_blocks_login_and_stale_token(
         },
     )
     assert stale_assign.status_code == 403
+
+
+def test_deactivate_player_closes_surveys_and_stops_recurrence(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CRON_SECRET", CRON_SECRET)
+    get_settings.cache_clear()
+    try:
+        coach_headers, org_id = bootstrap_coach(
+            client,
+            club_name="Stop Survey FC",
+            admin_email="stop-survey-admin@example.com",
+            coach_email="stop-survey-coach@example.com",
+        )
+        q = client.post(
+            "/api/v1/questionnaires",
+            headers=coach_headers,
+            json={
+                "name": "Daily Q",
+                "questions": [
+                    {
+                        "id": "ok",
+                        "prompt": "Ok?",
+                        "type": "yes_no",
+                        "required": True,
+                    }
+                ],
+            },
+        )
+        assert q.status_code == 200
+        player_headers, team_id, _ = bootstrap_player_on_team(
+            client,
+            coach_headers,
+            team_name="Stop Survey Team",
+            player_email="stop-survey-player@example.com",
+        )
+        player_id = client.get("/api/v1/me", headers=player_headers).json()["id"]
+        due = datetime.now(UTC) - timedelta(hours=25)
+        assigned = client.post(
+            "/api/v1/assignments",
+            headers=coach_headers,
+            json={
+                "questionnaire_id": q.json()["id"],
+                "target_type": "team",
+                "team_id": team_id,
+                "due_at": due.isoformat(),
+                "channel": "in_app",
+                "schedule": "daily",
+                "starts_on": (due - timedelta(days=1)).date().isoformat(),
+            },
+        )
+        assert assigned.status_code == 200
+        assignment_id = assigned.json()["id"]
+
+        deact = client.post(
+            f"/api/v1/organizations/{org_id}/players/{player_id}/deactivate",
+            headers=coach_headers,
+        )
+        assert deact.status_code == 204
+
+        db.expire_all()
+        occurrence = db.scalar(
+            select(PlayerOccurrence).where(
+                PlayerOccurrence.player_id == player_id
+            )
+        )
+        assert occurrence is not None
+        assert occurrence.status == OccurrenceStatus.MISSED
+        targets = list(
+            db.scalars(
+                select(AssignmentTarget).where(
+                    AssignmentTarget.assignment_id == assignment_id,
+                    AssignmentTarget.user_id == player_id,
+                )
+            )
+        )
+        assert targets == []
+
+        run = client.post(
+            "/api/v1/internal/reminders",
+            headers={"X-Cron-Secret": CRON_SECRET},
+        )
+        assert run.status_code == 200
+        db.expire_all()
+        occ_count = len(
+            list(
+                db.scalars(
+                    select(PlayerOccurrence).where(
+                        PlayerOccurrence.player_id == player_id
+                    )
+                )
+            )
+        )
+        assert occ_count == 1
+    finally:
+        get_settings.cache_clear()
 
 
 def test_deactivate_player_by_admin_and_sharing_coach(
