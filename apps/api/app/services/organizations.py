@@ -115,8 +115,9 @@ def deactivate_coach(
 
     membership.status = MembershipStatus.DEACTIVATED
     user.status = UserStatus.DEACTIVATED
-    # Clear credentials so invite reuse can reclaim this email (see invitations).
+    # Clear credentials / phone so invite reuse cannot keep the old WhatsApp identity.
     user.password_hash = None
+    user.phone_e164 = None
     users_repo.revoke_refresh_tokens_for_user(db, user_id)
     # Keep club teams reachable: hand off team_members to remaining coaches.
     remaining = orgs_repo.list_active_coach_ids(
@@ -171,8 +172,9 @@ def deactivate_player(
 
     membership.status = MembershipStatus.DEACTIVATED
     user.status = UserStatus.DEACTIVATED
-    # Clear credentials so invite reuse can reclaim this email (see invitations).
+    # Clear credentials / phone so invite reuse cannot keep the old WhatsApp identity.
     user.password_hash = None
+    user.phone_e164 = None
     users_repo.revoke_refresh_tokens_for_user(db, user_id)
     # Stop future surveys / WhatsApp: drop targets, leave teams, close open windows.
     assignments_repo.remove_assignment_targets_for_player_in_org(

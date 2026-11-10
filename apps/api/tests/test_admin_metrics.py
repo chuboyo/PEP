@@ -418,6 +418,69 @@ def test_deactivate_coach_blocks_login_and_stale_token(
     assert stale_assign.status_code == 403
 
 
+def test_deactivate_player_clears_phone_so_old_whatsapp_cannot_bind(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+) -> None:
+    coach_headers, org_id = bootstrap_coach(
+        client,
+        club_name="Phone Clear FC",
+        admin_email="phone-clear-admin@example.com",
+        coach_email="phone-clear-coach@example.com",
+    )
+    team = client.post(
+        "/api/v1/teams",
+        headers=coach_headers,
+        json={"name": "Phone Clear Team"},
+    ).json()
+    invite = client.post(
+        f"/api/v1/teams/{team['id']}/players",
+        headers=coach_headers,
+        json={
+            "name": "Pat Player",
+            "email": "phone-clear-player@example.com",
+            "phone_e164": "+15559876543",
+        },
+    )
+    assert invite.status_code == 200
+    accepted = client.post(
+        "/api/v1/auth/accept-invite",
+        json={
+            "token": token_from_invite_link(invite.json()["invite_link"]),
+            "password": "playerpass1",
+        },
+    )
+    assert accepted.status_code == 200
+    player_headers = {
+        "Authorization": f"Bearer {accepted.json()['access_token']}"
+    }
+    player_id = client.get("/api/v1/me", headers=player_headers).json()["id"]
+
+    deact = client.post(
+        f"/api/v1/organizations/{org_id}/players/{player_id}/deactivate",
+        headers=coach_headers,
+    )
+    assert deact.status_code == 204
+
+    db.expire_all()
+    user = db.get(User, player_id)
+    assert user is not None
+    assert user.phone_e164 is None
+
+    # Re-invite same email without a phone — must not restore the old number.
+    reinvite = client.post(
+        f"/api/v1/teams/{team['id']}/players",
+        headers=coach_headers,
+        json={"name": "Pat Player", "email": "phone-clear-player@example.com"},
+    )
+    assert reinvite.status_code == 200
+    db.expire_all()
+    user = db.get(User, player_id)
+    assert user is not None
+    assert user.phone_e164 is None
+
+
 def test_deactivate_player_removes_open_routines(
     client: TestClient,
     superadmin: User,
