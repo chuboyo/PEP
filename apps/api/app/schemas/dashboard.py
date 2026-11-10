@@ -28,6 +28,8 @@ class DashboardPlayerRowOut(BaseModel):
     player_id: uuid.UUID
     name: str
     status: OccurrenceStatus
+    occurrence_id: uuid.UUID | None = None
+    assignment_channel: AssignmentChannel | None = None
     submitted_at: datetime | None = None
     channel: AssignmentChannel | None = None
     answers: dict[str, Any] | None = None

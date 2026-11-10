@@ -37,6 +37,7 @@ services:
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
       WHATSAPP_TEMPLATE_START: ${WHATSAPP_TEMPLATE_START:-pep_survey_start}
       WHATSAPP_TEMPLATE_REMINDER: ${WHATSAPP_TEMPLATE_REMINDER:-pep_survey_reminder}
+      CRON_SECRET: ${CRON_SECRET:-}
     ports:
       - "8000:8000"
     volumes:

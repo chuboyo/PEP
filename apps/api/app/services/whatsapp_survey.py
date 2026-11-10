@@ -115,6 +115,53 @@ def dispatch_queued_start(
         delivery.status = DeliveryStatus.FAILED
 
 
+def queue_reminder_delivery(
+    db: Session, *, occurrence: PlayerOccurrence
+) -> Delivery:
+    """Persist a queued reminder delivery. Call Meta only after commit."""
+    return deliveries_repo.create_delivery(
+        db,
+        occurrence_id=occurrence.id,
+        channel=AssignmentChannel.WHATSAPP.value,
+        kind=DeliveryKind.REMINDER,
+        status=DeliveryStatus.QUEUED,
+    )
+
+
+def dispatch_queued_reminder(
+    db: Session,
+    *,
+    delivery_id: uuid.UUID,
+    player_name: str,
+    questionnaire_name: str,
+    to_e164: str,
+    channel: WhatsAppPort | None = None,
+) -> None:
+    """Send a previously committed queued reminder template. Never raises.
+
+    The QUEUED delivery must already be committed so a Meta success followed by
+    a crash cannot erase the row and allow a duplicate reminder on retry.
+    Caller should commit after dispatch so SENT/FAILED + provider_message_id
+    are durable.
+    """
+    port = channel or get_whatsapp_port()
+    settings = get_settings()
+    delivery = deliveries_repo.get_by_id(db, delivery_id)
+    if delivery is None or delivery.status != DeliveryStatus.QUEUED:
+        return
+    try:
+        message_id = port.send_template(
+            to_e164=to_e164,
+            template_name=settings.whatsapp_template_reminder,
+            body_params=[player_name, questionnaire_name],
+        )
+        delivery.status = DeliveryStatus.SENT
+        delivery.provider_message_id = message_id
+    except Exception:
+        logger.exception("Failed to send WhatsApp reminder template")
+        delivery.status = DeliveryStatus.FAILED
+
+
 def _send_question(
     db: Session,
     *,

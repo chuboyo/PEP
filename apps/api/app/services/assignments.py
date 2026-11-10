@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -52,6 +52,8 @@ def create_assignment(
     due_at: datetime | None,
     channel: AssignmentChannel,
     schedule: AssignmentSchedule,
+    starts_on: date | None = None,
+    ends_on: date | None = None,
     whatsapp: WhatsAppPort | None = None,
 ) -> tuple[Assignment, int]:
     org_id = _require_coach_org(principal)
@@ -61,16 +63,34 @@ def create_assignment(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Unsupported channel",
         )
-    if schedule != AssignmentSchedule.ONCE:
+    if schedule not in (
+        AssignmentSchedule.ONCE,
+        AssignmentSchedule.DAILY,
+        AssignmentSchedule.WEEKLY,
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Only schedule=once is supported in this slice",
+            detail="Unsupported schedule",
         )
     if due_at is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="due_at is required for schedule=once",
+            detail="due_at is required",
         )
+    if schedule in (AssignmentSchedule.DAILY, AssignmentSchedule.WEEKLY):
+        if starts_on is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="starts_on is required for daily/weekly schedules",
+            )
+        if ends_on is not None and ends_on < starts_on:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="ends_on must be on or after starts_on",
+            )
+    else:
+        starts_on = None
+        ends_on = None
 
     questionnaire = questionnaires_repo.get_questionnaire_by_id(db, questionnaire_id)
     if questionnaire is None or questionnaire.organization_id != org_id:
@@ -124,9 +144,11 @@ def create_assignment(
         created_by=principal.user_id,
         target_type=target_type,
         team_id=team_id if target_type == AssignmentTargetType.TEAM else None,
-        schedule=AssignmentSchedule.ONCE,
+        schedule=schedule,
         due_at=due_at,
         channel=channel,
+        starts_on=starts_on,
+        ends_on=ends_on,
     )
 
     if questionnaire.locked_at is None:

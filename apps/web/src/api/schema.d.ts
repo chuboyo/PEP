@@ -296,6 +296,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/occurrences/{occurrence_id}/remind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remind Occurrence */
+        post: operations["remind_occurrence_api_v1_occurrences__occurrence_id__remind_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/routines": {
         parameters: {
             query?: never;
@@ -417,6 +434,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/internal/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Reminders */
+        post: operations["run_reminders_api_v1_internal_reminders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -451,6 +485,10 @@ export interface components {
             channel: components["schemas"]["AssignmentChannel"];
             /** @default once */
             schedule: components["schemas"]["AssignmentSchedule"];
+            /** Starts On */
+            starts_on?: string | null;
+            /** Ends On */
+            ends_on?: string | null;
         };
         /** AssignmentOut */
         AssignmentOut: {
@@ -482,6 +520,10 @@ export interface components {
             schedule: components["schemas"]["AssignmentSchedule"];
             /** Due At */
             due_at: string | null;
+            /** Starts On */
+            starts_on?: string | null;
+            /** Ends On */
+            ends_on?: string | null;
             channel: components["schemas"]["AssignmentChannel"];
             /**
              * Created At
@@ -551,6 +593,9 @@ export interface components {
             /** Name */
             name: string;
             status: components["schemas"]["OccurrenceStatus"];
+            /** Occurrence Id */
+            occurrence_id?: string | null;
+            assignment_channel?: components["schemas"]["AssignmentChannel"] | null;
             /** Submitted At */
             submitted_at?: string | null;
             channel?: components["schemas"]["AssignmentChannel"] | null;
@@ -1835,6 +1880,35 @@ export interface operations {
             };
         };
     };
+    remind_occurrence_api_v1_occurrences__occurrence_id__remind_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                occurrence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_routines_api_v1_routines_get: {
         parameters: {
             query?: never;
@@ -2080,6 +2154,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    run_reminders_api_v1_internal_reminders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Cron-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

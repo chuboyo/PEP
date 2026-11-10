@@ -15,6 +15,8 @@ export type DashboardPlayerRow = {
   player_id: string;
   name: string;
   status: string;
+  occurrence_id: string | null;
+  assignment_channel: string | null;
   submitted_at: string | null;
   channel: string | null;
   answers: Record<string, unknown> | null;

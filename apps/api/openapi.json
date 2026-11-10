@@ -842,6 +842,47 @@
         ]
       }
     },
+    "/api/v1/occurrences/{occurrence_id}/remind": {
+      "post": {
+        "tags": [
+          "occurrences"
+        ],
+        "summary": "Remind Occurrence",
+        "operationId": "remind_occurrence_api_v1_occurrences__occurrence_id__remind_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "occurrence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Occurrence Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/routines": {
       "get": {
         "tags": [
@@ -1237,6 +1278,56 @@
           }
         }
       }
+    },
+    "/api/v1/internal/reminders": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Run Reminders",
+        "operationId": "run_reminders_api_v1_internal_reminders_post",
+        "parameters": [
+          {
+            "name": "X-Cron-Secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Run Reminders Api V1 Internal Reminders Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1325,6 +1416,30 @@
           "schedule": {
             "$ref": "#/components/schemas/AssignmentSchedule",
             "default": "once"
+          },
+          "starts_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts On"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
           }
         },
         "type": "object",
@@ -1392,6 +1507,30 @@
               }
             ],
             "title": "Due At"
+          },
+          "starts_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts On"
+          },
+          "ends_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends On"
           },
           "channel": {
             "$ref": "#/components/schemas/AssignmentChannel"
@@ -1539,6 +1678,28 @@
           },
           "status": {
             "$ref": "#/components/schemas/OccurrenceStatus"
+          },
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "assignment_channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "submitted_at": {
             "anyOf": [

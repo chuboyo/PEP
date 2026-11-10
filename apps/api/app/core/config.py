@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     whatsapp_template_start: str = "pep_survey_start"
     whatsapp_template_reminder: str = "pep_survey_reminder"
 
+    # Cron / internal jobs (empty → internal routes reject).
+    cron_secret: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

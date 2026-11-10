@@ -28,6 +28,8 @@ def create_assignment(
         due_at=body.due_at,
         channel=body.channel,
         schedule=body.schedule,
+        starts_on=body.starts_on,
+        ends_on=body.ends_on,
     )
     return AssignmentOut(
         id=assignment.id,
@@ -39,6 +41,8 @@ def create_assignment(
         team_id=assignment.team_id,
         schedule=assignment.schedule,
         due_at=assignment.due_at,
+        starts_on=assignment.starts_on,
+        ends_on=assignment.ends_on,
         channel=assignment.channel,
         created_at=assignment.created_at,
         occurrence_count=count,

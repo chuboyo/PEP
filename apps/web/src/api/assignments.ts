@@ -12,6 +12,8 @@ export type AssignmentOut = {
   team_id: string | null;
   schedule: string;
   due_at: string | null;
+  starts_on: string | null;
+  ends_on: string | null;
   channel: string;
   created_at: string;
   occurrence_count: number;
@@ -25,6 +27,8 @@ export type AssignmentCreateInput = {
   due_at: string;
   channel?: "in_app" | "whatsapp";
   schedule?: "once" | "daily" | "weekly";
+  starts_on?: string;
+  ends_on?: string | null;
 };
 
 export async function createAssignment(
@@ -43,4 +47,14 @@ export async function createAssignment(
     throw new ApiError(response.status, await readError(response));
   }
   return (await response.json()) as AssignmentOut;
+}
+
+export async function remindOccurrence(occurrenceId: string): Promise<void> {
+  const response = await apiFetch(
+    `/api/v1/occurrences/${occurrenceId}/remind`,
+    { method: "POST" },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, await readError(response));
+  }
 }
