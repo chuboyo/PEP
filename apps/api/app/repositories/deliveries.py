@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -48,4 +49,21 @@ def list_for_occurrence(db: Session, occurrence_id: uuid.UUID) -> list[Delivery]
             .where(Delivery.occurrence_id == occurrence_id)
             .order_by(Delivery.created_at.asc())
         ).all()
+    )
+
+
+def has_reminder_since(
+    db: Session, *, occurrence_id: uuid.UUID, since: datetime
+) -> bool:
+    return (
+        db.scalar(
+            select(Delivery.id)
+            .where(
+                Delivery.occurrence_id == occurrence_id,
+                Delivery.kind == DeliveryKind.REMINDER,
+                Delivery.created_at >= since,
+            )
+            .limit(1)
+        )
+        is not None
     )

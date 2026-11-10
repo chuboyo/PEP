@@ -8,7 +8,10 @@ import {
   QuestionStatChart,
 } from "../components/DashboardCharts";
 import { useMeQuery } from "../queries/auth";
-import { useTeamDashboardQuery } from "../queries/dashboard";
+import {
+  useRemindOccurrenceMutation,
+  useTeamDashboardQuery,
+} from "../queries/dashboard";
 import { useTeamsQuery } from "../queries/teams";
 
 function flagLabel(flag: AttentionFlag): string {
@@ -54,10 +57,23 @@ export function DashboardPage() {
   }, [teamId, teamIdFromUrl, teamsQuery.data, setSearchParams]);
 
   const dashboardQuery = useTeamDashboardQuery(teamId, !!isCoach && !!teamId);
+  const remindMutation = useRemindOccurrenceMutation(teamId);
+  const [remindError, setRemindError] = useState<string | null>(null);
 
   function onTeamChange(nextTeamId: string) {
     setTeamId(nextTeamId);
     setSearchParams(nextTeamId ? { team_id: nextTeamId } : {}, { replace: true });
+  }
+
+  function onRemind(occurrenceId: string) {
+    setRemindError(null);
+    remindMutation.mutate(occurrenceId, {
+      onError: (err) => {
+        setRemindError(
+          err instanceof Error ? err.message : "Could not send reminder",
+        );
+      },
+    });
   }
 
   if (!hasToken || mePending || !isCoach) {
@@ -192,25 +208,47 @@ export function DashboardPage() {
                 )}
 
                 <h2 className="section-title">Players</h2>
+                {remindError ? (
+                  <p className="alert" role="alert">
+                    {remindError}
+                  </p>
+                ) : null}
                 {dashboard.players.length === 0 ? (
                   <p className="muted">No assignment responses yet.</p>
                 ) : (
                   <ul className="meta-list">
-                    {dashboard.players.map((player) => (
-                      <li key={player.player_id}>
-                        <span className="label">{player.name}</span>
-                        <span className="value">{player.status}</span>
-                        {player.channel ? (
-                          <span className="muted">{player.channel}</span>
-                        ) : null}
-                        <Link
-                          className="btn btn--ghost"
-                          to={`/players/${player.player_id}`}
-                        >
-                          Detail
-                        </Link>
-                      </li>
-                    ))}
+                    {dashboard.players.map((player) => {
+                      const canRemind =
+                        player.occurrence_id &&
+                        player.assignment_channel === "whatsapp" &&
+                        (player.status === "pending" ||
+                          player.status === "in_progress");
+                      return (
+                        <li key={player.player_id}>
+                          <span className="label">{player.name}</span>
+                          <span className="value">{player.status}</span>
+                          {player.channel ? (
+                            <span className="muted">{player.channel}</span>
+                          ) : null}
+                          {canRemind ? (
+                            <button
+                              type="button"
+                              className="btn btn--ghost"
+                              disabled={remindMutation.isPending}
+                              onClick={() => onRemind(player.occurrence_id!)}
+                            >
+                              Remind
+                            </button>
+                          ) : null}
+                          <Link
+                            className="btn btn--ghost"
+                            to={`/players/${player.player_id}`}
+                          >
+                            Detail
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </>

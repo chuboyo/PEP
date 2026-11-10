@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -38,6 +38,8 @@ def create_assignment(
     schedule: AssignmentSchedule,
     due_at: datetime | None,
     channel: AssignmentChannel,
+    starts_on: date | None = None,
+    ends_on: date | None = None,
 ) -> Assignment:
     row = Assignment(
         organization_id=organization_id,
@@ -49,6 +51,8 @@ def create_assignment(
         schedule=schedule,
         due_at=due_at,
         channel=channel,
+        starts_on=starts_on,
+        ends_on=ends_on,
     )
     db.add(row)
     db.flush()
@@ -392,3 +396,95 @@ def list_player_submissions(
         (occurrence, assignment, name, response)
         for occurrence, assignment, name, response in rows
     ]
+
+
+def list_assignment_target_ids(
+    db: Session, *, assignment_id: uuid.UUID
+) -> list[uuid.UUID]:
+    return list(
+        db.scalars(
+            select(AssignmentTarget.user_id).where(
+                AssignmentTarget.assignment_id == assignment_id
+            )
+        ).all()
+    )
+
+
+def list_occurrences_due_in_window(
+    db: Session, *, window_start: datetime, window_end: datetime
+) -> list[tuple[PlayerOccurrence, Assignment]]:
+    """pending/in_progress occurrences with due_at in [window_start, window_end]."""
+    rows = db.execute(
+        select(PlayerOccurrence, Assignment)
+        .join(Assignment, Assignment.id == PlayerOccurrence.assignment_id)
+        .where(
+            PlayerOccurrence.status.in_(
+                [OccurrenceStatus.PENDING, OccurrenceStatus.IN_PROGRESS]
+            ),
+            PlayerOccurrence.due_at.is_not(None),
+            PlayerOccurrence.due_at >= window_start,
+            PlayerOccurrence.due_at <= window_end,
+        )
+    ).all()
+    return [(occurrence, assignment) for occurrence, assignment in rows]
+
+
+def list_pending_past_due(
+    db: Session, *, older_than: datetime
+) -> list[PlayerOccurrence]:
+    return list(
+        db.scalars(
+            select(PlayerOccurrence).where(
+                PlayerOccurrence.status == OccurrenceStatus.PENDING,
+                PlayerOccurrence.due_at.is_not(None),
+                PlayerOccurrence.due_at < older_than,
+            )
+        ).all()
+    )
+
+
+def list_recurring_assignments(db: Session) -> list[Assignment]:
+    return list(
+        db.scalars(
+            select(Assignment).where(
+                Assignment.schedule.in_(
+                    [AssignmentSchedule.DAILY, AssignmentSchedule.WEEKLY]
+                )
+            )
+        ).all()
+    )
+
+
+def get_latest_occurrence_for_assignment_player(
+    db: Session, *, assignment_id: uuid.UUID, player_id: uuid.UUID
+) -> PlayerOccurrence | None:
+    return db.scalar(
+        select(PlayerOccurrence)
+        .where(
+            PlayerOccurrence.assignment_id == assignment_id,
+            PlayerOccurrence.player_id == player_id,
+        )
+        .order_by(PlayerOccurrence.due_at.desc().nullslast())
+        .limit(1)
+    )
+
+
+def occurrence_exists_for_window(
+    db: Session,
+    *,
+    assignment_id: uuid.UUID,
+    player_id: uuid.UUID,
+    window_start: datetime,
+) -> bool:
+    return (
+        db.scalar(
+            select(PlayerOccurrence.id)
+            .where(
+                PlayerOccurrence.assignment_id == assignment_id,
+                PlayerOccurrence.player_id == player_id,
+                PlayerOccurrence.window_start == window_start,
+            )
+            .limit(1)
+        )
+        is not None
+    )

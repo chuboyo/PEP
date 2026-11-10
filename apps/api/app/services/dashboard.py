@@ -90,6 +90,8 @@ def get_team_dashboard(
                 player_id=user.id,
                 name=user.name,
                 status=occurrence.status,
+                occurrence_id=occurrence.id,
+                assignment_channel=assignment.channel,
                 submitted_at=submitted_at,
                 channel=channel,
                 answers=answers,

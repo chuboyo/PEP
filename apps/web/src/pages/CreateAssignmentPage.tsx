@@ -7,6 +7,13 @@ import { useMeQuery } from "../queries/auth";
 import { useQuestionnairesQuery } from "../queries/questionnaires";
 import { useTeamsQuery } from "../queries/teams";
 
+function localDateInputValue(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function CreateAssignmentPage() {
   const navigate = useNavigate();
   const hasToken = !!getAccessToken();
@@ -22,6 +29,11 @@ export function CreateAssignmentPage() {
   const [teamId, setTeamId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [channel, setChannel] = useState<"in_app" | "whatsapp">("in_app");
+  const [schedule, setSchedule] = useState<"once" | "daily" | "weekly">(
+    "once",
+  );
+  const [startsOn, setStartsOn] = useState(localDateInputValue);
+  const [endsOn, setEndsOn] = useState("");
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -46,10 +58,11 @@ export function CreateAssignmentPage() {
     }
   }, [teamId, teamsQuery.data]);
 
+  const isRecurring = schedule === "daily" || schedule === "weekly";
+
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     setSuccessCount(null);
-    // datetime-local is wall time in the browser's timezone; convert to UTC ISO.
     const due = new Date(dueAt);
     if (Number.isNaN(due.getTime())) {
       return;
@@ -61,7 +74,9 @@ export function CreateAssignmentPage() {
         team_id: teamId,
         due_at: due.toISOString(),
         channel,
-        schedule: "once",
+        schedule,
+        starts_on: isRecurring ? startsOn : undefined,
+        ends_on: isRecurring && endsOn ? endsOn : undefined,
       },
       {
         onSuccess: (result) => {
@@ -128,6 +143,19 @@ export function CreateAssignmentPage() {
             </select>
           </label>
           <label className="field">
+            <span>Schedule</span>
+            <select
+              value={schedule}
+              onChange={(e) =>
+                setSchedule(e.target.value as "once" | "daily" | "weekly")
+              }
+            >
+              <option value="once">Once</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </label>
+          <label className="field">
             <span>Due at (your local timezone)</span>
             <input
               type="datetime-local"
@@ -136,6 +164,27 @@ export function CreateAssignmentPage() {
               required
             />
           </label>
+          {isRecurring ? (
+            <>
+              <label className="field">
+                <span>Starts on</span>
+                <input
+                  type="date"
+                  value={startsOn}
+                  onChange={(e) => setStartsOn(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Ends on (optional)</span>
+                <input
+                  type="date"
+                  value={endsOn}
+                  onChange={(e) => setEndsOn(e.target.value)}
+                />
+              </label>
+            </>
+          ) : null}
           <label className="field">
             <span>Channel</span>
             <select
@@ -163,7 +212,11 @@ export function CreateAssignmentPage() {
             className="btn btn--primary"
             type="submit"
             disabled={
-              createMutation.isPending || !questionnaireId || !teamId || !dueAt
+              createMutation.isPending ||
+              !questionnaireId ||
+              !teamId ||
+              !dueAt ||
+              (isRecurring && !startsOn)
             }
           >
             {createMutation.isPending ? "Assigning…" : "Assign"}

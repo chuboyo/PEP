@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -22,6 +22,8 @@ class AssignmentCreate(BaseModel):
     due_at: datetime | None = None
     channel: AssignmentChannel = AssignmentChannel.IN_APP
     schedule: AssignmentSchedule = AssignmentSchedule.ONCE
+    starts_on: date | None = None
+    ends_on: date | None = None
 
     @model_validator(mode="after")
     def validate_target_fields(self) -> AssignmentCreate:
@@ -42,6 +44,8 @@ class AssignmentOut(BaseModel):
     team_id: uuid.UUID | None
     schedule: AssignmentSchedule
     due_at: datetime | None
+    starts_on: date | None = None
+    ends_on: date | None = None
     channel: AssignmentChannel
     created_at: datetime
     occurrence_count: int
