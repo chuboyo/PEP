@@ -308,7 +308,9 @@ def handle_inbound_message(
     if user is None or not user.phone_e164:
         logger.info("Ignoring WhatsApp message from unknown sender")
         return
-    if user.status != UserStatus.ACTIVE:
+    # INVITED players may already have a phone and WhatsApp assignment before
+    # accept-invite; only DEACTIVATED (and other non-participating) are blocked.
+    if user.status not in (UserStatus.ACTIVE, UserStatus.INVITED):
         logger.info("Ignoring WhatsApp message from inactive user %s", user.id)
         return
 

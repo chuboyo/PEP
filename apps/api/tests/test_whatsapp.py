@@ -20,6 +20,7 @@ from app.models import (
     PlayerOccurrence,
     Response,
     User,
+    UserStatus,
 )
 from app.ports.whatsapp import InMemoryWhatsApp, set_whatsapp_port
 from app.services.whatsapp_survey import reply_id
@@ -875,6 +876,85 @@ def test_full_survey_one_response_second_tap_no_duplicate(
     assert any(
         m.kind == "text" and m.body == "Already submitted" for m in wa_memory.sent
     )
+
+
+def test_invited_player_can_start_whatsapp_before_accept(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    wa_memory: InMemoryWhatsApp,
+) -> None:
+    """INVITED (not yet accepted) players with a phone must still answer on WA."""
+    coach_headers, _ = bootstrap_coach(
+        client,
+        club_name="Invited WA FC",
+        admin_email="invited-wa-admin@example.com",
+        coach_email="invited-wa-coach@example.com",
+    )
+    created = client.post(
+        "/api/v1/questionnaires",
+        headers=coach_headers,
+        json={"name": "WA Invited", "questions": _three_question_payload()[:1]},
+    )
+    assert created.status_code == 200
+    team = client.post(
+        "/api/v1/teams",
+        headers=coach_headers,
+        json={"name": "Invited WA Team"},
+    ).json()
+    invite = client.post(
+        f"/api/v1/teams/{team['id']}/players",
+        headers=coach_headers,
+        json={
+            "name": "Pat Player",
+            "email": "invited-wa-player@example.com",
+            "phone_e164": "+15551234567",
+        },
+    )
+    assert invite.status_code == 200
+    # Do not accept-invite — user stays INVITED.
+    due = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    assigned = client.post(
+        "/api/v1/assignments",
+        headers=coach_headers,
+        json={
+            "questionnaire_id": created.json()["id"],
+            "target_type": "team",
+            "team_id": team["id"],
+            "due_at": due,
+            "channel": "whatsapp",
+        },
+    )
+    assert assigned.status_code == 200, assigned.text
+
+    db.expire_all()
+    user = db.scalar(select(User).where(User.email == "invited-wa-player@example.com"))
+    assert user is not None
+    assert user.status == UserStatus.INVITED
+    occurrence = db.scalar(select(PlayerOccurrence).limit(1))
+    assert occurrence is not None
+
+    wa_memory.clear()
+    assert (
+        _post_webhook(
+            client,
+            _message_envelope(
+                {
+                    "from": "15551234567",
+                    "id": "wamid.invited.start",
+                    "timestamp": "1",
+                    "type": "button",
+                    "button": {"payload": "START", "text": "Start"},
+                }
+            ),
+        ).status_code
+        == 200
+    )
+    db.expire_all()
+    occurrence = db.get(PlayerOccurrence, occurrence.id)
+    assert occurrence is not None
+    assert occurrence.status == OccurrenceStatus.IN_PROGRESS
+    assert any(m.kind in ("buttons", "list") for m in wa_memory.sent)
 
 
 def test_missed_occurrence_ignores_stale_whatsapp_reply(
