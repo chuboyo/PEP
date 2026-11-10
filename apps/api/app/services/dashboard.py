@@ -73,6 +73,7 @@ def get_team_dashboard(
     questionnaire_name = assignments_repo.get_questionnaire_name(
         db, assignment.questionnaire_id
     )
+    # One row per player: latest occurrence for this assignment (current window).
     rows = assignments_repo.list_assignment_player_rows(db, assignment_id=assignment.id)
 
     players: list[DashboardPlayerRowOut] = []

@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.models import (
     Delivery,
     DeliveryKind,
+    DeliveryStatus,
     OccurrenceStatus,
     PlayerOccurrence,
     User,
@@ -23,6 +24,33 @@ from tests.helpers import (
 )
 
 CRON_SECRET = "test-cron-secret"
+
+
+class _AssertReminderQueuedThenFail(InMemoryWhatsApp):
+    """Fails Meta send after verifying a committed QUEUED reminder row exists."""
+
+    def __init__(self, db: Session) -> None:
+        super().__init__()
+        self.db = db
+        self.saw_committed_queued = False
+
+    def send_template(
+        self,
+        *,
+        to_e164: str,
+        template_name: str,
+        body_params: list[str],
+    ) -> str:
+        self.db.expire_all()
+        rows = list(
+            self.db.scalars(
+                select(Delivery).where(Delivery.kind == DeliveryKind.REMINDER)
+            )
+        )
+        assert len(rows) == 1
+        assert rows[0].status == DeliveryStatus.QUEUED
+        self.saw_committed_queued = True
+        raise RuntimeError("meta unavailable after queued commit")
 
 
 @pytest.fixture()
@@ -172,6 +200,76 @@ def test_two_job_runs_create_one_reminder_delivery(
     assert any(m.kind == "template" for m in wa_memory.sent)
 
 
+def test_reminder_commits_queued_delivery_before_meta_send(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    wa_memory: InMemoryWhatsApp,
+) -> None:
+    """QUEUED is durable before Meta; FAILED does not block a later retry."""
+    coach_headers, team_id, qid = _bootstrap_wa_team(
+        client, suffix="commit-before-send"
+    )
+    due = datetime.now(UTC) - timedelta(hours=1)
+    _assign_whatsapp(
+        client,
+        coach_headers,
+        questionnaire_id=qid,
+        team_id=team_id,
+        due_at=due,
+    )
+    occurrence = db.scalar(select(PlayerOccurrence).limit(1))
+    assert occurrence is not None
+    oid = occurrence.id
+
+    port = _AssertReminderQueuedThenFail(db)
+    set_whatsapp_port(port)
+    try:
+        first = client.post(
+            f"/api/v1/occurrences/{oid}/remind",
+            headers=coach_headers,
+        )
+        assert first.status_code == 204
+        assert port.saw_committed_queued is True
+
+        db.expire_all()
+        reminders = list(
+            db.scalars(
+                select(Delivery).where(Delivery.kind == DeliveryKind.REMINDER)
+            )
+        )
+        assert len(reminders) == 1
+        assert reminders[0].status == DeliveryStatus.FAILED
+    finally:
+        set_whatsapp_port(None)
+
+    # Meta failure must not burn the 24h cap — coach can retry successfully.
+    set_whatsapp_port(wa_memory)
+    try:
+        retry = client.post(
+            f"/api/v1/occurrences/{oid}/remind",
+            headers=coach_headers,
+        )
+        assert retry.status_code == 204
+        db.expire_all()
+        statuses = {
+            d.status
+            for d in db.scalars(
+                select(Delivery).where(Delivery.kind == DeliveryKind.REMINDER)
+            )
+        }
+        assert DeliveryStatus.FAILED in statuses
+        assert DeliveryStatus.SENT in statuses
+
+        blocked = client.post(
+            f"/api/v1/occurrences/{oid}/remind",
+            headers=coach_headers,
+        )
+        assert blocked.status_code == 409
+    finally:
+        set_whatsapp_port(None)
+
+
 def test_coach_remind_second_call_returns_409(
     client: TestClient,
     superadmin: User,
@@ -314,7 +412,7 @@ def test_daily_spawns_next_occurrence_after_window_and_respects_ends_on(
         len(list(db.scalars(select(PlayerOccurrence)))) == 1
     )
 
-    # Without ends_on, next occurrence is created.
+    # Without ends_on, next occurrence is created and WhatsApp gets a start invite.
     coach_headers2, team_id2, qid2 = _bootstrap_wa_team(
         client, suffix="daily2", phone="+15553334444"
     )
@@ -328,6 +426,7 @@ def test_daily_spawns_next_occurrence_after_window_and_respects_ends_on(
         schedule="daily",
         starts_on=(due2 - timedelta(days=1)).date().isoformat(),
     )
+    wa_memory.clear()
     run2 = client.post(
         "/api/v1/internal/reminders",
         headers={"X-Cron-Secret": CRON_SECRET},
@@ -344,9 +443,25 @@ def test_daily_spawns_next_occurrence_after_window_and_respects_ends_on(
         )
     )
     assert any(r.status == OccurrenceStatus.MISSED for r in rows)
-    assert any(
-        r.status == OccurrenceStatus.PENDING
+    new_pending = [
+        r
+        for r in rows
+        if r.status == OccurrenceStatus.PENDING
         and r.due_at is not None
         and r.due_at > due2
-        for r in rows
+    ]
+    assert len(new_pending) >= 1
+    start_name = get_settings().whatsapp_template_start
+    assert any(
+        m.kind == "template" and m.template_name == start_name for m in wa_memory.sent
     )
+    spawned_starts = list(
+        db.scalars(
+            select(Delivery).where(
+                Delivery.occurrence_id.in_([o.id for o in new_pending]),
+                Delivery.kind == DeliveryKind.SURVEY_START,
+            )
+        )
+    )
+    assert len(spawned_starts) >= 1
+    assert all(d.status == DeliveryStatus.SENT for d in spawned_starts)

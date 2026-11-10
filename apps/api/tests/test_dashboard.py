@@ -3,12 +3,15 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import get_settings
 from app.models import User
 from tests.helpers import (
     bootstrap_coach,
     bootstrap_player_on_team,
     token_from_invite_link,
 )
+
+CRON_SECRET = "test-cron-secret"
 
 
 def _rating_questions() -> list[dict]:
@@ -359,6 +362,70 @@ def test_two_past_due_without_response_produce_missed_streak(
     ]
     assert len(missed) == 1
     assert missed[0]["player_name"] == "Pat Player"
+
+
+def test_dashboard_uses_latest_occurrence_per_player_for_recurring(
+    client: TestClient,
+    superadmin: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Recurring windows must not duplicate roster rows or mix old answers."""
+    monkeypatch.setenv("CRON_SECRET", CRON_SECRET)
+    get_settings.cache_clear()
+    try:
+        coach_headers, _ = bootstrap_coach(
+            client,
+            club_name="Recur Dash FC",
+            admin_email="recur-dash-admin@example.com",
+            coach_email="recur-dash-coach@example.com",
+        )
+        questionnaire_id = _create_rating_questionnaire(client, coach_headers)
+        player_headers, team_id, _ = bootstrap_player_on_team(
+            client,
+            coach_headers,
+            team_name="Recur Dash Squad",
+            player_email="recur-dash-player@example.com",
+        )
+        due = datetime.now(UTC) - timedelta(hours=25)
+        assigned = client.post(
+            "/api/v1/assignments",
+            headers=coach_headers,
+            json={
+                "questionnaire_id": questionnaire_id,
+                "target_type": "team",
+                "team_id": team_id,
+                "due_at": due.isoformat(),
+                "channel": "in_app",
+                "schedule": "daily",
+                "starts_on": (due - timedelta(days=1)).date().isoformat(),
+            },
+        )
+        assert assigned.status_code == 200, assigned.text
+        _submit_rating(client, player_headers, 2)
+
+        spawned = client.post(
+            "/api/v1/internal/reminders",
+            headers={"X-Cron-Secret": CRON_SECRET},
+        )
+        assert spawned.status_code == 200
+        assert spawned.json()["spawned_count"] >= 1
+
+        _submit_rating(client, player_headers, 5)
+
+        dashboard = client.get(
+            f"/api/v1/teams/{team_id}/dashboard",
+            headers=coach_headers,
+        )
+        assert dashboard.status_code == 200
+        body = dashboard.json()
+        assert body["roster_size"] == 1
+        assert len(body["players"]) == 1
+        assert body["completion_count"] == 1
+        assert body["players"][0]["status"] == "completed"
+        assert body["players"][0]["answers"] == {"fatigue": 5}
+        assert body["question_stats"][0]["average"] == pytest.approx(5.0)
+    finally:
+        get_settings.cache_clear()
 
 
 def test_dashboard_shows_submitted_player_answers(

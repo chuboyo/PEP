@@ -293,14 +293,29 @@ def get_questionnaire_name(db: Session, questionnaire_id: uuid.UUID) -> str | No
 def list_assignment_player_rows(
     db: Session, *, assignment_id: uuid.UUID
 ) -> list[tuple[PlayerOccurrence, User, Response | None]]:
+    """Latest occurrence per player for this assignment (current window only).
+
+    Recurring schedules keep many windows under one assignment; the dashboard
+    must not list or aggregate every historical occurrence.
+    """
     rows = db.execute(
         select(PlayerOccurrence, User, Response)
         .join(User, User.id == PlayerOccurrence.player_id)
         .outerjoin(Response, Response.occurrence_id == PlayerOccurrence.id)
         .where(PlayerOccurrence.assignment_id == assignment_id)
-        .order_by(User.name.asc())
+        .order_by(
+            PlayerOccurrence.player_id.asc(),
+            PlayerOccurrence.due_at.desc().nullslast(),
+            PlayerOccurrence.created_at.desc(),
+        )
     ).all()
-    return [(occurrence, user, response) for occurrence, user, response in rows]
+    latest_by_player: dict[uuid.UUID, tuple[PlayerOccurrence, User, Response | None]] = {}
+    for occurrence, user, response in rows:
+        if occurrence.player_id not in latest_by_player:
+            latest_by_player[occurrence.player_id] = (occurrence, user, response)
+    result = list(latest_by_player.values())
+    result.sort(key=lambda row: row[1].name.lower())
+    return result
 
 
 def list_roster_player_names(

@@ -137,7 +137,13 @@ def dispatch_queued_reminder(
     to_e164: str,
     channel: WhatsAppPort | None = None,
 ) -> None:
-    """Send a previously committed queued reminder template. Never raises."""
+    """Send a previously committed queued reminder template. Never raises.
+
+    The QUEUED delivery must already be committed so a Meta success followed by
+    a crash cannot erase the row and allow a duplicate reminder on retry.
+    Caller should commit after dispatch so SENT/FAILED + provider_message_id
+    are durable.
+    """
     port = channel or get_whatsapp_port()
     settings = get_settings()
     delivery = deliveries_repo.get_by_id(db, delivery_id)

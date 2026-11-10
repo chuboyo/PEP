@@ -55,12 +55,20 @@ def list_for_occurrence(db: Session, occurrence_id: uuid.UUID) -> list[Delivery]
 def has_reminder_since(
     db: Session, *, occurrence_id: uuid.UUID, since: datetime
 ) -> bool:
+    """True if a reminder was sent or is in-flight (QUEUED) in the window.
+
+    FAILED rows do not block retries — the player never got the template.
+    QUEUED still blocks so a crash after Meta success cannot duplicate.
+    """
     return (
         db.scalar(
             select(Delivery.id)
             .where(
                 Delivery.occurrence_id == occurrence_id,
                 Delivery.kind == DeliveryKind.REMINDER,
+                Delivery.status.in_(
+                    [DeliveryStatus.SENT, DeliveryStatus.QUEUED]
+                ),
                 Delivery.created_at >= since,
             )
             .limit(1)
