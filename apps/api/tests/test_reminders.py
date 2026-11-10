@@ -300,6 +300,50 @@ def test_coach_remind_second_call_returns_409(
     assert second.status_code == 409
 
 
+def test_coach_remind_still_capped_after_webhook_delivered(
+    client: TestClient,
+    superadmin: User,
+    db: Session,
+    wa_memory: InMemoryWhatsApp,
+) -> None:
+    """DELIVERED/READ promotions must not reopen the 24h remind window."""
+    coach_headers, team_id, qid = _bootstrap_wa_team(
+        client, suffix="remind-delivered"
+    )
+    due = datetime.now(UTC) - timedelta(hours=1)
+    _assign_whatsapp(
+        client,
+        coach_headers,
+        questionnaire_id=qid,
+        team_id=team_id,
+        due_at=due,
+    )
+    occurrence = db.scalar(select(PlayerOccurrence).limit(1))
+    assert occurrence is not None
+    oid = occurrence.id
+
+    first = client.post(
+        f"/api/v1/occurrences/{oid}/remind",
+        headers=coach_headers,
+    )
+    assert first.status_code == 204
+
+    db.expire_all()
+    reminder = db.scalar(
+        select(Delivery).where(Delivery.kind == DeliveryKind.REMINDER)
+    )
+    assert reminder is not None
+    assert reminder.status == DeliveryStatus.SENT
+    reminder.status = DeliveryStatus.DELIVERED
+    db.commit()
+
+    second = client.post(
+        f"/api/v1/occurrences/{oid}/remind",
+        headers=coach_headers,
+    )
+    assert second.status_code == 409
+
+
 def test_old_pending_becomes_missed(
     client: TestClient,
     superadmin: User,
