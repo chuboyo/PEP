@@ -148,10 +148,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Coaches */
+        get: operations["list_coaches_api_v1_organizations__organization_id__coaches_get"];
         put?: never;
         /** Invite Coach */
         post: operations["invite_coach_api_v1_organizations__organization_id__coaches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Organization Metrics */
+        get: operations["get_organization_metrics_api_v1_organizations__organization_id__metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/coaches/{user_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Coach */
+        post: operations["deactivate_coach_api_v1_organizations__organization_id__coaches__user_id__deactivate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organization_id}/players/{user_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Player */
+        post: operations["deactivate_player_api_v1_organizations__organization_id__players__user_id__deactivate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -583,6 +635,20 @@ export interface components {
             /** Invite Link */
             invite_link: string;
         };
+        /** CoachListItem */
+        CoachListItem: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Status */
+            status: string;
+        };
         /** DashboardPlayerRowOut */
         DashboardPlayerRowOut: {
             /**
@@ -754,6 +820,25 @@ export interface components {
             status: string;
             /** Admin Email */
             admin_email: string | null;
+        };
+        /** OrganizationMetricsOut */
+        OrganizationMetricsOut: {
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /** Coach Count */
+            coach_count: number;
+            /** Player Count */
+            player_count: number;
+            /** Active Player Count */
+            active_player_count: number;
+            /** Questionnaire Completed Count */
+            questionnaire_completed_count: number;
+            /** Questionnaire Occurrence Count */
+            questionnaire_occurrence_count: number;
+            routine_counts: components["schemas"]["RoutineCountsOut"];
         };
         /** OrganizationOut */
         OrganizationOut: {
@@ -1552,6 +1637,37 @@ export interface operations {
             };
         };
     };
+    list_coaches_api_v1_organizations__organization_id__coaches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     invite_coach_api_v1_organizations__organization_id__coaches_post: {
         parameters: {
             query?: never;
@@ -1575,6 +1691,97 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CoachInviteCreated"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_organization_metrics_api_v1_organizations__organization_id__metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationMetricsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_coach_api_v1_organizations__organization_id__coaches__user_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_player_api_v1_organizations__organization_id__players__user_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organization_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

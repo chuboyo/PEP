@@ -37,10 +37,20 @@ def get_current_principal(
         ) from None
 
     user = users_repo.get_user_by_id(db, user_id)
-    if user is None or user.status != UserStatus.ACTIVE:
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
+        )
+
+    # Deactivated users keep a valid JWT but lose memberships/teams so
+    # require_coach (etc.) returns 403. Login still rejects non-ACTIVE users.
+    if user.status != UserStatus.ACTIVE:
+        return Principal(
+            user_id=user.id,
+            platform_role=user.platform_role.value if user.platform_role else None,
+            memberships=[],
+            team_ids=[],
         )
 
     memberships = users_repo.list_active_memberships(db, user.id)
@@ -79,6 +89,30 @@ def require_club_admin(
     organization = orgs_repo.get_organization_by_id(db, organization_id)
     if organization is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    role = principal.active_role_in(organization_id)
+    if role is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if role != MembershipRole.CLUB_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    return principal
+
+
+def require_metrics_reader(
+    organization_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+) -> Principal:
+    """Club admin of this club, or Superadmin. Others get 404/403 like club admin."""
+    organization = orgs_repo.get_organization_by_id(db, organization_id)
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if principal.is_superadmin:
+        return principal
 
     role = principal.active_role_in(organization_id)
     if role is None:

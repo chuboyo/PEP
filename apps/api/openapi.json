@@ -387,6 +387,206 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "List Coaches",
+        "operationId": "list_coaches_api_v1_organizations__organization_id__coaches_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoachListItem"
+                  },
+                  "title": "Response List Coaches Api V1 Organizations  Organization Id  Coaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organization_id}/metrics": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Get Organization Metrics",
+        "operationId": "get_organization_metrics_api_v1_organizations__organization_id__metrics_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMetricsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organization_id}/coaches/{user_id}/deactivate": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Deactivate Coach",
+        "operationId": "deactivate_coach_api_v1_organizations__organization_id__coaches__user_id__deactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organization_id}/players/{user_id}/deactivate": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Deactivate Player",
+        "operationId": "deactivate_player_api_v1_organizations__organization_id__players__user_id__deactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/teams": {
@@ -1665,6 +1865,35 @@
         ],
         "title": "CoachInviteCreated"
       },
+      "CoachListItem": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "email",
+          "status"
+        ],
+        "title": "CoachListItem"
+      },
       "DashboardPlayerRowOut": {
         "properties": {
           "player_id": {
@@ -2109,6 +2338,49 @@
           "admin_email"
         ],
         "title": "OrganizationListItem"
+      },
+      "OrganizationMetricsOut": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Organization Id"
+          },
+          "coach_count": {
+            "type": "integer",
+            "title": "Coach Count"
+          },
+          "player_count": {
+            "type": "integer",
+            "title": "Player Count"
+          },
+          "active_player_count": {
+            "type": "integer",
+            "title": "Active Player Count"
+          },
+          "questionnaire_completed_count": {
+            "type": "integer",
+            "title": "Questionnaire Completed Count"
+          },
+          "questionnaire_occurrence_count": {
+            "type": "integer",
+            "title": "Questionnaire Occurrence Count"
+          },
+          "routine_counts": {
+            "$ref": "#/components/schemas/RoutineCountsOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "coach_count",
+          "player_count",
+          "active_player_count",
+          "questionnaire_completed_count",
+          "questionnaire_occurrence_count",
+          "routine_counts"
+        ],
+        "title": "OrganizationMetricsOut"
       },
       "OrganizationOut": {
         "properties": {

@@ -3,7 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { getAccessToken } from "../auth";
 import { useMeQuery } from "../queries/auth";
-import { useInviteCoachMutation } from "../queries/organizations";
+import {
+  useDeactivateCoachMutation,
+  useInviteCoachMutation,
+  useOrganizationCoachesQuery,
+} from "../queries/organizations";
 
 export function ClubCoachesPage() {
   const navigate = useNavigate();
@@ -14,6 +18,11 @@ export function ClubCoachesPage() {
   );
   const organizationId = clubAdminMembership?.organization_id ?? "";
   const inviteMutation = useInviteCoachMutation(organizationId);
+  const deactivateMutation = useDeactivateCoachMutation(organizationId);
+  const coachesQuery = useOrganizationCoachesQuery(
+    organizationId,
+    !!clubAdminMembership,
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,16 +79,25 @@ export function ClubCoachesPage() {
       ? inviteMutation.error.message
       : inviteMutation.isError
         ? "Could not invite coach"
-        : null;
+        : deactivateMutation.error instanceof Error
+          ? deactivateMutation.error.message
+          : deactivateMutation.isError
+            ? "Could not deactivate coach"
+            : null;
 
   return (
     <main className="shell shell--center">
       <div className="panel panel--wide">
         <header className="topbar">
           <h1 className="brand">Coaches</h1>
-          <Link className="btn btn--ghost" to="/">
-            Home
-          </Link>
+          <div className="nav-links">
+            <Link className="btn btn--ghost" to="/club">
+              Club home
+            </Link>
+            <Link className="btn btn--ghost" to="/">
+              Home
+            </Link>
+          </div>
         </header>
 
         <p className="lede">Register a coach for your club</p>
@@ -124,6 +142,38 @@ export function ClubCoachesPage() {
             </button>
           </div>
         ) : null}
+
+        <h2 className="section-title">Active coaches</h2>
+        {coachesQuery.isPending ? (
+          <p className="muted">Loading coaches…</p>
+        ) : coachesQuery.isError ? (
+          <p className="alert" role="alert">
+            Could not load coaches
+          </p>
+        ) : (coachesQuery.data?.length ?? 0) === 0 ? (
+          <p className="muted">No coaches yet.</p>
+        ) : (
+          <ul className="meta-list">
+            {coachesQuery.data?.map((coach) => (
+              <li key={coach.user_id}>
+                <span className="label">{coach.status}</span>
+                <span className="value">{coach.name}</span>
+                <span className="muted">{coach.email}</span>
+                <button
+                  className="btn btn--ghost"
+                  type="button"
+                  disabled={
+                    deactivateMutation.isPending &&
+                    deactivateMutation.variables === coach.user_id
+                  }
+                  onClick={() => deactivateMutation.mutate(coach.user_id)}
+                >
+                  Deactivate
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </main>
   );

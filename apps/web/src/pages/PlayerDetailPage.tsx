@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getAccessToken } from "../auth";
@@ -9,6 +9,7 @@ import {
 } from "../components/PlayerDetailCharts";
 import { useMeQuery } from "../queries/auth";
 import { usePlayerDetailQuery } from "../queries/dashboard";
+import { useDeactivatePlayerMutation } from "../queries/organizations";
 
 export function PlayerDetailPage() {
   const { playerId = "" } = useParams();
@@ -18,7 +19,12 @@ export function PlayerDetailPage() {
   const isCoach = me?.memberships.some(
     (m) => m.role === "COACH" && m.status === "active",
   );
+  const organizationId =
+    me?.memberships.find((m) => m.role === "COACH" && m.status === "active")
+      ?.organization_id ?? "";
   const detailQuery = usePlayerDetailQuery(playerId, !!isCoach && !!playerId);
+  const deactivateMutation = useDeactivatePlayerMutation(organizationId);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasToken) {
@@ -44,6 +50,28 @@ export function PlayerDetailPage() {
         <header className="topbar">
           <h1 className="brand">{detailQuery.data?.name ?? "Player"}</h1>
           <div className="nav-links">
+            {organizationId && playerId ? (
+              <button
+                className="btn btn--ghost"
+                type="button"
+                disabled={deactivateMutation.isPending}
+                onClick={() => {
+                  setDeactivateError(null);
+                  deactivateMutation.mutate(playerId, {
+                    onSuccess: () => navigate("/teams"),
+                    onError: (err) => {
+                      setDeactivateError(
+                        err instanceof Error
+                          ? err.message
+                          : "Could not deactivate player",
+                      );
+                    },
+                  });
+                }}
+              >
+                {deactivateMutation.isPending ? "Deactivating…" : "Deactivate"}
+              </button>
+            ) : null}
             <Link className="btn btn--ghost" to="/dashboard">
               Dashboard
             </Link>
@@ -52,6 +80,12 @@ export function PlayerDetailPage() {
             </Link>
           </div>
         </header>
+
+        {deactivateError ? (
+          <p className="alert" role="alert">
+            {deactivateError}
+          </p>
+        ) : null}
 
         {detailQuery.isPending ? (
           <p className="muted">Loading…</p>

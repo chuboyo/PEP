@@ -3,11 +3,20 @@ from __future__ import annotations
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.principal import Principal
-from app.models import Membership, MembershipRole, MembershipStatus, Organization, OrganizationStatus, User
+from app.models import (
+    Membership,
+    MembershipRole,
+    MembershipStatus,
+    OccurrenceStatus,
+    Organization,
+    OrganizationStatus,
+    PlayerOccurrence,
+    User,
+)
 
 
 def get_organization_by_id(db: Session, organization_id: uuid.UUID) -> Organization | None:
@@ -80,3 +89,89 @@ def list_organizations_with_admin_email(
         )
         rows.append((org, admin_email))
     return rows
+
+
+def count_memberships(
+    db: Session,
+    *,
+    organization_id: uuid.UUID,
+    role: MembershipRole,
+    statuses: list[MembershipStatus],
+) -> int:
+    return int(
+        db.scalar(
+            select(func.count())
+            .select_from(Membership)
+            .where(
+                Membership.organization_id == organization_id,
+                Membership.role == role,
+                Membership.status.in_(statuses),
+            )
+        )
+        or 0
+    )
+
+
+def list_player_ids_in_organization(
+    db: Session,
+    *,
+    organization_id: uuid.UUID,
+    statuses: list[MembershipStatus],
+) -> list[uuid.UUID]:
+    return list(
+        db.scalars(
+            select(Membership.user_id).where(
+                Membership.organization_id == organization_id,
+                Membership.role == MembershipRole.PLAYER,
+                Membership.status.in_(statuses),
+            )
+        ).all()
+    )
+
+
+def count_occurrences(
+    db: Session,
+    *,
+    organization_id: uuid.UUID,
+    status: OccurrenceStatus | None = None,
+) -> int:
+    stmt = (
+        select(func.count())
+        .select_from(PlayerOccurrence)
+        .where(PlayerOccurrence.organization_id == organization_id)
+    )
+    if status is not None:
+        stmt = stmt.where(PlayerOccurrence.status == status)
+    return int(db.scalar(stmt) or 0)
+
+
+def get_membership_for_org_role(
+    db: Session,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    role: MembershipRole,
+) -> Membership | None:
+    return db.scalar(
+        select(Membership).where(
+            Membership.organization_id == organization_id,
+            Membership.user_id == user_id,
+            Membership.role == role,
+        )
+    )
+
+
+def list_coaches_for_organization(
+    db: Session, *, organization_id: uuid.UUID
+) -> list[tuple[User, Membership]]:
+    rows = db.execute(
+        select(User, Membership)
+        .join(Membership, Membership.user_id == User.id)
+        .where(
+            Membership.organization_id == organization_id,
+            Membership.role == MembershipRole.COACH,
+            Membership.status != MembershipStatus.DEACTIVATED,
+        )
+        .order_by(User.name.asc())
+    ).all()
+    return [(user, membership) for user, membership in rows]

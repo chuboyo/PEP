@@ -98,9 +98,14 @@ export function HomePage() {
                 </>
               ) : null}
               {isClubAdmin ? (
-                <Link className="btn btn--primary" to="/club/coaches">
-                  Register coaches
-                </Link>
+                <>
+                  <Link className="btn btn--primary" to="/club">
+                    Club home
+                  </Link>
+                  <Link className="btn btn--ghost" to="/club/coaches">
+                    Register coaches
+                  </Link>
+                </>
               ) : null}
               {isCoach ? (
                 <>
