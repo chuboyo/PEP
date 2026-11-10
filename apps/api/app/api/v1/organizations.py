@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import (
     get_current_principal,
     require_club_admin,
+    require_metrics_reader,
     require_superadmin,
 )
 from app.core.principal import Principal
@@ -16,12 +17,15 @@ from app.repositories import organizations as orgs_repo
 from app.schemas.organizations import (
     CoachInviteCreate,
     CoachInviteCreated,
+    CoachListItem,
     OrganizationCreate,
     OrganizationCreated,
     OrganizationListItem,
+    OrganizationMetricsOut,
     OrganizationOut,
 )
 from app.services import invitations as invitations_service
+from app.services import organizations as organizations_service
 
 router = APIRouter(tags=["organizations"])
 
@@ -113,3 +117,66 @@ def invite_coach(
         email=result.invitee_email,
         invite_link=result.invite_link,
     )
+
+
+@router.get(
+    "/organizations/{organization_id}/metrics",
+    response_model=OrganizationMetricsOut,
+)
+def get_organization_metrics(
+    organization_id: uuid.UUID,
+    _: Principal = Depends(require_metrics_reader),
+    db: Session = Depends(get_db),
+) -> OrganizationMetricsOut:
+    return organizations_service.get_organization_metrics(
+        db, organization_id=organization_id
+    )
+
+
+@router.get(
+    "/organizations/{organization_id}/coaches",
+    response_model=list[CoachListItem],
+)
+def list_coaches(
+    organization_id: uuid.UUID,
+    _: Principal = Depends(require_club_admin),
+    db: Session = Depends(get_db),
+) -> list[CoachListItem]:
+    return organizations_service.list_coaches(db, organization_id=organization_id)
+
+
+@router.post(
+    "/organizations/{organization_id}/coaches/{user_id}/deactivate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def deactivate_coach(
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    _: Principal = Depends(require_club_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    organizations_service.deactivate_coach(
+        db, organization_id=organization_id, user_id=user_id
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/organizations/{organization_id}/players/{user_id}/deactivate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def deactivate_player(
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+) -> Response:
+    organizations_service.deactivate_player(
+        db,
+        principal=principal,
+        organization_id=organization_id,
+        user_id=user_id,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

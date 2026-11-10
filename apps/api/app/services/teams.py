@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.principal import Principal
-from app.models import MembershipRole, Team
+from app.models import MembershipRole, MembershipStatus, Team
 from app.repositories import teams as teams_repo
 from app.repositories import users as users_repo
 
@@ -65,17 +65,23 @@ def get_team_roster(
             None,
         )
         # Include invited players on the roster (membership may still be invited).
+        # Skip deactivated players — they must not keep showing Deactivate.
         if role is None:
             all_m = users_repo.list_memberships_for_user(db, user.id)
-            role = next(
+            org_membership = next(
                 (
-                    m.role.value
+                    m
                     for m in all_m
                     if m.organization_id == team.organization_id
                     and m.role == MembershipRole.PLAYER
                 ),
                 None,
             )
+            if org_membership is None:
+                continue
+            if org_membership.status == MembershipStatus.DEACTIVATED:
+                continue
+            role = org_membership.role.value
         roster.append(
             {
                 "user_id": user.id,

@@ -4,6 +4,8 @@ import uuid
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.dashboard import RoutineCountsOut
+
 
 class OrganizationOut(BaseModel):
     id: uuid.UUID
@@ -51,3 +53,20 @@ class CoachInviteCreated(BaseModel):
     organization_id: uuid.UUID
     email: str
     invite_link: str
+
+
+class OrganizationMetricsOut(BaseModel):
+    organization_id: uuid.UUID
+    coach_count: int
+    player_count: int
+    active_player_count: int
+    questionnaire_completed_count: int
+    questionnaire_occurrence_count: int
+    routine_counts: RoutineCountsOut
+
+
+class CoachListItem(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    email: str
+    status: str

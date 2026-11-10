@@ -58,7 +58,9 @@ export function AdminClubsListPage() {
             {clubsQuery.data?.map((club) => (
               <li key={club.id}>
                 <span className="label">{club.status}</span>
-                <span className="value">{club.name}</span>
+                <span className="value">
+                  <Link to={`/admin/clubs/${club.id}`}>{club.name}</Link>
+                </span>
                 <span className="muted">{club.admin_email ?? "No admin"}</span>
               </li>
             ))}

@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AcceptInvitePage } from "./pages/AcceptInvitePage";
+import { AdminClubMetricsPage } from "./pages/AdminClubMetricsPage";
 import { AdminClubsListPage } from "./pages/AdminClubsListPage";
 import { AdminClubsPage } from "./pages/AdminClubsPage";
 import { ClubCoachesPage } from "./pages/ClubCoachesPage";
+import { ClubHomePage } from "./pages/ClubHomePage";
 import { CreateAssignmentPage } from "./pages/CreateAssignmentPage";
 import { CreateQuestionnairePage } from "./pages/CreateQuestionnairePage";
 import { CreateRoutinePage } from "./pages/CreateRoutinePage";
@@ -28,6 +30,11 @@ export function App() {
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/admin/clubs" element={<AdminClubsListPage />} />
       <Route path="/admin/clubs/new" element={<AdminClubsPage />} />
+      <Route
+        path="/admin/clubs/:organizationId"
+        element={<AdminClubMetricsPage />}
+      />
+      <Route path="/club" element={<ClubHomePage />} />
       <Route path="/club/coaches" element={<ClubCoachesPage />} />
       <Route path="/teams" element={<TeamsPage />} />
       <Route path="/teams/new" element={<CreateTeamPage />} />

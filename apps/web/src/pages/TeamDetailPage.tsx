@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getAccessToken } from "../auth";
 import { useMeQuery } from "../queries/auth";
+import { useDeactivatePlayerMutation } from "../queries/organizations";
 import { useTeamQuery } from "../queries/teams";
 
 export function TeamDetailPage() {
@@ -14,6 +15,9 @@ export function TeamDetailPage() {
     (m) => m.role === "COACH" && m.status === "active",
   );
   const teamQuery = useTeamQuery(teamId, !!isCoach && !!teamId);
+  const organizationId = teamQuery.data?.organization_id ?? "";
+  const deactivateMutation = useDeactivatePlayerMutation(organizationId);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasToken) {
@@ -61,6 +65,11 @@ export function TeamDetailPage() {
         </header>
 
         <h2 className="section-title">Roster</h2>
+        {deactivateError ? (
+          <p className="alert" role="alert">
+            {deactivateError}
+          </p>
+        ) : null}
         {teamQuery.isPending ? (
           <p className="muted">Loading…</p>
         ) : teamQuery.isError ? (
@@ -85,6 +94,30 @@ export function TeamDetailPage() {
                   <span className="value">{member.name}</span>
                 )}
                 <span className="muted">{member.email}</span>
+                {member.role === "PLAYER" && organizationId ? (
+                  <button
+                    className="btn btn--ghost"
+                    type="button"
+                    disabled={
+                      deactivateMutation.isPending &&
+                      deactivateMutation.variables === member.user_id
+                    }
+                    onClick={() => {
+                      setDeactivateError(null);
+                      deactivateMutation.mutate(member.user_id, {
+                        onError: (err) => {
+                          setDeactivateError(
+                            err instanceof Error
+                              ? err.message
+                              : "Could not deactivate player",
+                          );
+                        },
+                      });
+                    }}
+                  >
+                    Deactivate
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

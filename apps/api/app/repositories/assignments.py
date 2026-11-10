@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -423,6 +423,40 @@ def list_assignment_target_ids(
             )
         ).all()
     )
+
+
+def remove_assignment_targets_for_player_in_org(
+    db: Session, *, player_id: uuid.UUID, organization_id: uuid.UUID
+) -> None:
+    db.execute(
+        delete(AssignmentTarget).where(
+            AssignmentTarget.user_id == player_id,
+            AssignmentTarget.assignment_id.in_(
+                select(Assignment.id).where(
+                    Assignment.organization_id == organization_id
+                )
+            ),
+        )
+    )
+
+
+def miss_open_occurrences_for_player_in_org(
+    db: Session, *, player_id: uuid.UUID, organization_id: uuid.UUID
+) -> int:
+    rows = list(
+        db.scalars(
+            select(PlayerOccurrence).where(
+                PlayerOccurrence.player_id == player_id,
+                PlayerOccurrence.organization_id == organization_id,
+                PlayerOccurrence.status.in_(
+                    [OccurrenceStatus.PENDING, OccurrenceStatus.IN_PROGRESS]
+                ),
+            )
+        ).all()
+    )
+    for occurrence in rows:
+        occurrence.status = OccurrenceStatus.MISSED
+    return len(rows)
 
 
 def list_occurrences_due_in_window(
