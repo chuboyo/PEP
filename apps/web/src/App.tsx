@@ -18,6 +18,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { PlayerDetailPage } from "./pages/PlayerDetailPage";
 import { PlayerHistoryPage } from "./pages/PlayerHistoryPage";
 import { PlayerPage } from "./pages/PlayerPage";
+import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
 import { QuestionnairesPage } from "./pages/QuestionnairesPage";
 import { RoutinesPage } from "./pages/RoutinesPage";
 import { TeamDetailPage } from "./pages/TeamDetailPage";
@@ -27,6 +28,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/admin/clubs" element={<AdminClubsListPage />} />
       <Route path="/admin/clubs/new" element={<AdminClubsPage />} />

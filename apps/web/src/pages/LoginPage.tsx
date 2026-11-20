@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 
 import { useLoginMutation } from "../queries/auth";
 
@@ -58,6 +59,9 @@ export function LoginPage() {
             {loginMutation.isPending ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p className="muted login-footer">
+          <Link to="/privacy">Privacy policy</Link>
+        </p>
       </div>
     </main>
   );

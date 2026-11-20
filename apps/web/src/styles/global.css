@@ -404,6 +404,64 @@ input {
   gap: 0.75rem;
 }
 
+.login-footer {
+  margin: 1.25rem 0 0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.legal {
+  max-width: min(100%, 40rem);
+  margin-inline: auto;
+}
+
+.legal__brand {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.legal__brand a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.legal h1 {
+  font-size: clamp(1.75rem, 4vw, 2.15rem);
+  margin-bottom: 0.35rem;
+}
+
+.legal__updated {
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+}
+
+.legal h2 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.65rem;
+}
+
+.legal p,
+.legal li {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.legal ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.legal__footer {
+  margin: 2rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
 @media (max-width: 480px) {
   .panel {
     padding: 1.25rem;
