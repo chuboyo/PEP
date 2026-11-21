@@ -32,7 +32,7 @@ export function PlayerDetailPage() {
       return;
     }
     if (!mePending && me && !isCoach) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, navigate]);
 
@@ -75,7 +75,7 @@ export function PlayerDetailPage() {
             <Link className="btn btn--ghost" to="/dashboard">
               Dashboard
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

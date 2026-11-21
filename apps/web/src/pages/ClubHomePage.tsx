@@ -25,7 +25,7 @@ export function ClubHomePage() {
       return;
     }
     if (!mePending && me && !clubAdminMembership) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, clubAdminMembership, navigate]);
 
@@ -46,7 +46,7 @@ export function ClubHomePage() {
             <Link className="btn btn--ghost" to="/club/coaches">
               Coaches
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

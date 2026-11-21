@@ -20,7 +20,7 @@ export function QuestionnairesPage() {
       return;
     }
     if (!mePending && me && !isCoach) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, navigate]);
 
@@ -41,7 +41,7 @@ export function QuestionnairesPage() {
             <Link className="btn btn--primary" to="/questionnaires/new">
               New questionnaire
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

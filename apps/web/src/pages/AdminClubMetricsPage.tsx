@@ -23,7 +23,7 @@ export function AdminClubMetricsPage() {
       return;
     }
     if (!mePending && me && !isSuperadmin) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isSuperadmin, navigate]);
 
@@ -44,7 +44,7 @@ export function AdminClubMetricsPage() {
             <Link className="btn btn--ghost" to="/admin/clubs">
               All clubs
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

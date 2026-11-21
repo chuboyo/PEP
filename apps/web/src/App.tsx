@@ -14,6 +14,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { EditQuestionnairePage } from "./pages/EditQuestionnairePage";
 import { HomePage } from "./pages/HomePage";
 import { InvitePlayerPage } from "./pages/InvitePlayerPage";
+import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlayerDetailPage } from "./pages/PlayerDetailPage";
 import { PlayerHistoryPage } from "./pages/PlayerHistoryPage";
@@ -27,6 +28,8 @@ import { TeamsPage } from "./pages/TeamsPage";
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/home" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
@@ -58,7 +61,6 @@ export function App() {
       <Route path="/players/:playerId" element={<PlayerDetailPage />} />
       <Route path="/player/history" element={<PlayerHistoryPage />} />
       <Route path="/player" element={<PlayerPage />} />
-      <Route path="/" element={<HomePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

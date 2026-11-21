@@ -33,7 +33,7 @@ export function useLoginMutation() {
     onSuccess: async (tokens) => {
       setTokens(tokens.access_token, tokens.refresh_token);
       await queryClient.invalidateQueries({ queryKey: meQueryKey });
-      navigate("/");
+      navigate("/home");
     },
   });
 }
@@ -46,7 +46,7 @@ export function useLogoutMutation() {
     mutationFn: logoutApi,
     onSuccess: () => {
       clearMeQuery(queryClient);
-      navigate("/login");
+      navigate("/");
     },
   });
 }
@@ -62,7 +62,7 @@ export function useAcceptInviteMutation() {
       setTokens(tokens.access_token, tokens.refresh_token);
       clearMeQuery(queryClient);
       await queryClient.invalidateQueries({ queryKey: meQueryKey });
-      navigate("/");
+      navigate("/home");
     },
   });
 }

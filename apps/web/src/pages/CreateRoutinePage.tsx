@@ -46,7 +46,7 @@ export function CreateRoutinePage() {
       return;
     }
     if (!mePending && me && !isCoach) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, navigate]);
 
@@ -114,7 +114,7 @@ export function CreateRoutinePage() {
             <Link className="btn btn--ghost" to="/routines">
               Routines
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

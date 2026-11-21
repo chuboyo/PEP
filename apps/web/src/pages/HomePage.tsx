@@ -15,7 +15,7 @@ export function HomePage() {
 
   useEffect(() => {
     if (!hasToken) {
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   }, [hasToken, navigate]);
 
@@ -23,7 +23,7 @@ export function HomePage() {
     if (error instanceof ApiError && error.status === 401) {
       clearTokens();
       clearMeQuery(queryClient);
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   }, [error, navigate, queryClient]);
 

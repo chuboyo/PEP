@@ -136,7 +136,7 @@ export function PlayerPage() {
       return;
     }
     if (!mePending && me && !isPlayer) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isPlayer, navigate]);
 
@@ -198,7 +198,7 @@ export function PlayerPage() {
             <Link className="btn btn--ghost" to="/player/history">
               History
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

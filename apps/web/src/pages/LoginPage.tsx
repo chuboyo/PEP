@@ -60,6 +60,8 @@ export function LoginPage() {
           </button>
         </form>
         <p className="muted login-footer">
+          <Link to="/">Home</Link>
+          {" · "}
           <Link to="/privacy">Privacy policy</Link>
         </p>
       </div>

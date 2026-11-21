@@ -28,7 +28,7 @@ export function EditQuestionnairePage() {
       return;
     }
     if (!mePending && me && !isCoach) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, navigate]);
 
@@ -94,7 +94,7 @@ export function EditQuestionnairePage() {
             <Link className="btn btn--ghost" to="/questionnaires">
               All questionnaires
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

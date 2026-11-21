@@ -24,7 +24,7 @@ export function TeamsPage() {
       return;
     }
     if (!mePending && me && !canList) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, canList, navigate]);
 
@@ -47,7 +47,7 @@ export function TeamsPage() {
                 Create team
               </Link>
             ) : null}
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

@@ -123,7 +123,7 @@ export function RoutinesPage() {
       return;
     }
     if (!mePending && me && !isCoach && !isPlayer) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, isPlayer, navigate]);
 
@@ -154,7 +154,7 @@ export function RoutinesPage() {
                 New routine
               </Link>
             ) : null}
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

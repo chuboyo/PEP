@@ -18,7 +18,7 @@ export function AdminClubsListPage() {
       return;
     }
     if (!mePending && me && !isSuperadmin) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isSuperadmin, navigate]);
 
@@ -39,7 +39,7 @@ export function AdminClubsListPage() {
             <Link className="btn btn--primary" to="/admin/clubs/new">
               Create club
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

@@ -25,7 +25,7 @@ export function TeamDetailPage() {
       return;
     }
     if (!mePending && me && !isCoach) {
-      navigate("/");
+      navigate("/home");
     }
   }, [hasToken, me, mePending, isCoach, navigate]);
 
@@ -58,7 +58,7 @@ export function TeamDetailPage() {
             <Link className="btn btn--ghost" to="/teams">
               All teams
             </Link>
-            <Link className="btn btn--ghost" to="/">
+            <Link className="btn btn--ghost" to="/home">
               Home
             </Link>
           </div>

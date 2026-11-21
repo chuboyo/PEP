@@ -5,7 +5,7 @@ export function PrivacyPolicyPage() {
     <main className="shell">
       <article className="panel panel--wide legal">
         <p className="legal__brand">
-          <Link to="/login">Pep</Link>
+          <Link to="/">Pep</Link>
         </p>
         <h1>Privacy Policy</h1>
         <p className="muted legal__updated">Last updated: 20 November 2026</p>
@@ -175,7 +175,9 @@ export function PrivacyPolicyPage() {
         </p>
 
         <p className="legal__footer">
-          <Link to="/login">Back to sign in</Link>
+          <Link to="/">Home</Link>
+          {" · "}
+          <Link to="/login">Sign in</Link>
         </p>
       </article>
     </main>
